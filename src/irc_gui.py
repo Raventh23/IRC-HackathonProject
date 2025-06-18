@@ -41,6 +41,9 @@ class IRCClientGUI:
         
         # Start checking for messages
         self.check_messages()
+        
+        # Set up menu bar
+        self.setup_menu_bar()
     
     def setup_window(self):
         """Set up the basic window structure and frames."""
@@ -515,7 +518,7 @@ class IRCClientGUI:
         message = self.message_entry.get().strip()
         
         # Validate message
-        if not message:
+        if not self.validate_input(message):
             return
         
         if not self.connected or not self.current_channel:
@@ -545,7 +548,101 @@ class IRCClientGUI:
         cmd = parts[0].lower()
         
         if cmd == '/help':
-            self.show_help()
+            self.show_help_gui()
+        elif cmd == '/clear':
+            self.clear_chat()
+        elif cmd == '/join' and len(parts) > 1:
+            channel = parts[1]
+            if not channel.startswith('#'):
+                channel = '#' + channel
+            self.add_system_message(f"Attempting to join {channel}...")
+            if self.irc_client:
+                self.irc_client.join_channel(channel)
+        elif cmd == '/part' or cmd == '/leave':
+            if self.current_channel:
+                self.add_system_message(f"Leaving {self.current_channel}...")
+                if self.irc_client:
+                    self.irc_client.send_raw(f"PART {self.current_channel}")
+            else:
+                self.add_error_message("Not in a channel")
+        elif cmd == '/quit':
+            self.on_closing()
+        else:
+            self.add_error_message(f"Unknown command: {cmd}. Type /help for available commands.")
+    
+    def show_help_gui(self):
+        """Show help dialog window."""
+        help_window = tk.Toplevel(self.root)
+        help_window.title("IRC Commands Help")
+        help_window.geometry("500x400")
+        help_window.resizable(False, False)
+        
+        # Center the window
+        help_window.transient(self.root)
+        help_window.grab_set()
+        
+        # Help text
+        help_text = scrolledtext.ScrolledText(
+            help_window,
+            wrap=tk.WORD,
+            font=("Consolas", 10),
+            padx=10,
+            pady=10
+        )
+        help_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
+        
+        help_content = """IRC CHAT CLIENT - COMMAND HELP
+
+BASIC COMMANDS:
+/help                Show this help message
+/clear               Clear chat history
+/join #channel       Join a channel (e.g., /join #SiLabs)
+/part or /leave      Leave current channel
+/quit                Exit the application
+
+KEYBOARD SHORTCUTS:
+Ctrl+N              Connect to IRC
+Ctrl+D              Disconnect from IRC
+Ctrl+L              Clear chat
+Ctrl+Q              Exit application
+Ctrl+J              Focus channel entry
+Enter               Send message (in message field)
+Enter               Join channel (in channel field)
+
+USAGE TIPS:
+• Click on channels in the list to switch between them
+• Use the Connect button to connect to irc.libera.chat
+• The application auto-joins #SiLabs when connecting
+• Channel names must start with # (automatically added if missing)
+• Messages are only sent to the currently selected channel
+
+FEATURES:
+• Real-time IRC messaging
+• Multi-channel support
+• User join/leave notifications
+• Automatic reconnection support
+• Professional GUI interface
+
+For more information about IRC commands, type /help in the chat."""
+
+        help_text.insert(tk.END, help_content)
+        help_text.config(state=tk.DISABLED)
+        
+        # Close button
+        close_button = ttk.Button(
+            help_window,
+            text="Close",
+            command=help_window.destroy
+        )
+        close_button.pack(pady=10)
+    
+    def handle_command(self, command):
+        """Handle IRC commands from the input field."""
+        parts = command.split()
+        cmd = parts[0].lower()
+        
+        if cmd == '/help':
+            self.show_help_gui()
         elif cmd == '/clear':
             self.clear_chat()
         elif cmd == '/join' and len(parts) > 1:
@@ -586,6 +683,29 @@ class IRCClientGUI:
         """Disable message input (called when disconnected)."""
         self.message_entry.config(state=tk.DISABLED)
         self.send_button.config(state=tk.DISABLED)
+    
+    def show_status_message(self, message, duration=3000):
+        """Show a temporary status message."""
+        # Create a temporary label for status messages
+        if not hasattr(self, 'temp_status_label'):
+            self.temp_status_label = ttk.Label(self.status_frame, text="", foreground="blue")
+        
+        self.temp_status_label.config(text=message)
+        self.temp_status_label.pack(side=tk.LEFT, padx=(20, 0))
+        
+        # Remove after duration
+        self.root.after(duration, lambda: self.temp_status_label.pack_forget())
+    
+    def validate_input(self, message):
+        """Validate user input before sending."""
+        if len(message) > 512:  # IRC message limit
+            self.add_error_message("Message too long (max 512 characters)")
+            return False
+        
+        if not message.strip():
+            return False
+            
+        return True
     
     def join_channel_gui(self):
         """Handle channel joining from GUI."""
@@ -702,3 +822,51 @@ class IRCClientGUI:
         self.channel_entry.config(state=tk.DISABLED)
         self.join_button.config(state=tk.DISABLED)
         self.leave_button.config(state=tk.DISABLED)
+    
+    def setup_menu_bar(self):
+        """Set up the menu bar."""
+        menubar = tk.Menu(self.root)
+        self.root.config(menu=menubar)
+        
+        # File menu
+        file_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="File", menu=file_menu)
+        file_menu.add_command(label="Connect", command=self.connect_to_irc, accelerator="Ctrl+N")
+        file_menu.add_command(label="Disconnect", command=self.disconnect_from_irc, accelerator="Ctrl+D")
+        file_menu.add_separator()
+        file_menu.add_command(label="Clear Chat", command=self.clear_chat, accelerator="Ctrl+L")
+        file_menu.add_separator()
+        file_menu.add_command(label="Exit", command=self.on_closing, accelerator="Ctrl+Q")
+        
+        # Help menu
+        help_menu = tk.Menu(menubar, tearoff=0)
+        menubar.add_cascade(label="Help", menu=help_menu)
+        help_menu.add_command(label="Commands", command=self.show_help)
+        help_menu.add_command(label="About", command=self.show_about)
+        
+        # Bind keyboard shortcuts
+        self.root.bind('<Control-n>', lambda e: self.connect_to_irc())
+        self.root.bind('<Control-d>', lambda e: self.disconnect_from_irc())
+        self.root.bind('<Control-l>', lambda e: self.clear_chat())
+        self.root.bind('<Control-q>', lambda e: self.on_closing())
+        self.root.bind('<Control-j>', lambda e: self.channel_entry.focus())
+    
+    def show_about(self):
+        """Show about dialog."""
+        about_text = """IRC Chat Client - GUI Version
+        
+A graphical user interface for IRC chat.
+Built with Python and tkinter.
+
+Features:
+• Real-time IRC connectivity
+• Multi-channel support
+• User-friendly interface
+• Keyboard shortcuts
+
+Default server: irc.libera.chat
+Auto-join channel: #SiLabs
+
+© 2025 SiLabs Project"""
+        
+        messagebox.showinfo("About IRC Chat Client", about_text)
