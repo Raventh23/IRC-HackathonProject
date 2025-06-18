@@ -91,6 +91,9 @@ class IRCClientGUI:
         self.input_frame = ttk.Frame(main_frame)
         self.input_frame.pack(fill=tk.X, pady=(0, 5))
         
+        # Set up message input system
+        self.setup_message_input()
+        
         # Add separators for visual clarity
         separator1 = ttk.Separator(main_frame, orient='horizontal')
         separator1.pack(fill=tk.X, pady=(5, 10))
@@ -241,3 +244,105 @@ class IRCClientGUI:
         self.chat_text.config(state=tk.NORMAL)
         self.chat_text.delete(1.0, tk.END)
         self.chat_text.config(state=tk.DISABLED)
+    
+    def setup_message_input(self):
+        """Set up the message input area with entry field and send button."""
+        # Message input label
+        input_label = ttk.Label(self.input_frame, text="Message:")
+        input_label.pack(side=tk.LEFT, padx=(0, 5))
+        
+        # Message entry widget
+        self.message_entry = ttk.Entry(
+            self.input_frame,
+            font=("Consolas", 10),
+            width=50
+        )
+        self.message_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
+        
+        # Send button
+        self.send_button = ttk.Button(
+            self.input_frame,
+            text="Send",
+            command=self.send_message,
+            width=8
+        )
+        self.send_button.pack(side=tk.RIGHT)
+        
+        # Bind Enter key to send message
+        self.message_entry.bind('<Return>', lambda event: self.send_message())
+        
+        # Initially disable input until connected
+        self.message_entry.config(state=tk.DISABLED)
+        self.send_button.config(state=tk.DISABLED)
+    
+    def send_message(self):
+        """Send a message from the input field."""
+        message = self.message_entry.get().strip()
+        
+        # Validate message
+        if not message:
+            return
+        
+        if not self.connected or not self.current_channel:
+            self.add_error_message("Must be connected and in a channel to send messages")
+            return
+        
+        # Check for commands
+        if message.startswith('/'):
+            self.handle_command(message)
+        else:
+            # Send regular message
+            if self.irc_client:
+                try:
+                    # For now, just display locally (will integrate with IRC client in Step 6)
+                    self.add_user_message("You", message)
+                    # TODO: Actually send to IRC client when integrated
+                except Exception as e:
+                    self.add_error_message(f"Failed to send message: {str(e)}")
+        
+        # Clear input field
+        self.message_entry.delete(0, tk.END)
+    
+    def handle_command(self, command):
+        """Handle IRC commands from the input field."""
+        parts = command.split()
+        cmd = parts[0].lower()
+        
+        if cmd == '/help':
+            self.show_help()
+        elif cmd == '/clear':
+            self.clear_chat()
+        elif cmd == '/join' and len(parts) > 1:
+            channel = parts[1]
+            self.add_system_message(f"Attempting to join {channel}...")
+            # TODO: Actually join channel when IRC client is integrated
+        elif cmd == '/part' or cmd == '/leave':
+            if self.current_channel:
+                self.add_system_message(f"Leaving {self.current_channel}...")
+                # TODO: Actually leave channel when IRC client is integrated
+            else:
+                self.add_error_message("Not in a channel")
+        elif cmd == '/quit':
+            self.on_closing()
+        else:
+            self.add_error_message(f"Unknown command: {cmd}. Type /help for available commands.")
+    
+    def show_help(self):
+        """Display available commands in the chat."""
+        self.add_system_message("Available commands:")
+        self.add_system_message("/help - Show this help message")
+        self.add_system_message("/clear - Clear chat history")
+        self.add_system_message("/join #channel - Join a channel")
+        self.add_system_message("/part or /leave - Leave current channel")
+        self.add_system_message("/quit - Exit the application")
+    
+    def enable_input(self):
+        """Enable message input (called when connected)."""
+        self.message_entry.config(state=tk.NORMAL)
+        self.send_button.config(state=tk.NORMAL)
+        self.message_entry.focus()
+    
+    def disable_input(self):
+        """Disable message input (called when disconnected)."""
+        self.message_entry.config(state=tk.DISABLED)
+        self.send_button.config(state=tk.DISABLED)
