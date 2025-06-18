@@ -1,0 +1,10 @@
+{
+  "server": "irc.libera.chat",
+  "port": 6667,
+  "nickname": "MyIRCBot",
+  "username": "ircuser",
+  "realname": "My Custom IRC Client",
+  "auto_reconnect": true,
+  "reconnect_delay": 30,
+  "show_status_messages": true
+}

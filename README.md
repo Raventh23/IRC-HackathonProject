@@ -30,6 +30,10 @@ This project implements a simple, terminal-based IRC client that can connect to 
 - ✅ **Real-time**: Simultaneous send/receive with threading
 - ✅ **Help System**: Comprehensive command documentation
 - ✅ **Connection Monitoring**: PING/PONG handling and stability checks
+- ✅ **Auto-reconnect**: Automatic reconnection with channel rejoining
+- ✅ **Configuration**: JSON config files and command-line arguments
+- ✅ **Statistics**: Session tracking, uptime monitoring, message counts
+- ✅ **Enhanced UX**: Improved formatting, status messages, visual organization
 
 ## Requirements
 
@@ -61,30 +65,82 @@ The client will connect to irc.libera.chat by default. You can specify a differe
 - `/me action` - Send action message (* nickname action)
 - `/msg nickname message` - Send private message to user
 - `/help [command]` - Show help for all commands or specific command
+- `/status` - Show connection and session status
+- `/stats` - Display session statistics
+- `/uptime` - Show session uptime
+- `/reconnect` - Manually reconnect to server
+- `/config [show|save|toggle]` - Manage configuration settings
 
 ### Interactive Features
-- Real-time message display with timestamps
+- Real-time message display with enhanced formatting
 - Threaded input handling for simultaneous chat
 - Comprehensive error handling with helpful messages
 - Input validation and security protection
-- Connection stability monitoring
+- Connection stability monitoring and auto-reconnect
+- Session statistics and uptime tracking
+- Configuration file support and command-line arguments
+- Enhanced status reporting and visual organization
+
+## Advanced Usage (Stage 5 Features)
+
+### Command Line Options
+```bash
+# Basic usage
+python3 tests/test_stage5.py
+
+# Connect with auto-reconnect enabled
+python3 tests/test_stage5.py --auto-reconnect
+
+# Use configuration file
+python3 tests/test_stage5.py -c config/example_config.json
+
+# Connect to different server with custom settings
+python3 tests/test_stage5.py -s irc.freenode.net -n MyBot --channel "#mychannel"
+
+# Enable debug mode with enhanced features
+python3 tests/test_stage5.py --debug --auto-reconnect --reconnect-delay 15
+```
+
+### Configuration File Support
+Create a `config.json` file:
+```json
+{
+  "server": "irc.libera.chat",
+  "port": 6667,
+  "nickname": "MyBot",
+  "auto_reconnect": true,
+  "reconnect_delay": 30,
+  "show_status_messages": true
+}
+```
+
+### Enhanced Commands in Session
+- `/status` - View detailed connection status and statistics
+- `/config show` - Display current configuration
+- `/config save filename.json` - Save current settings
+- `/stats` - Show session statistics (messages, uptime)
+- `/reconnect` - Manually reconnect to server
+
+See [Stage 5 Usage Guide](docs/stage5_usage.md) for detailed documentation.
 
 ## Development Status
 
 This project follows a structured build plan with incremental feature delivery.
 
-### Current Stage: Stage 4 Complete ✅
-**Essential Commands & Error Handling**
+### Current Stage: Stage 5 Complete ✅
+**Polish & Stability**
 
 **Completed Stages:**
 - ✅ **Stage 1**: Foundation Setup & Socket Connection
 - ✅ **Stage 2**: IRC Protocol Basics & Authentication  
 - ✅ **Stage 3**: Core Chat Functionality & Interactive Interface
 - ✅ **Stage 4**: Essential Commands & Comprehensive Error Handling
+- ✅ **Stage 5**: Polish & Stability (Connection reliability, Enhanced UX)
 
 **Next Steps:**
-- **Stage 5**: Polish & Stability (Connection reliability, UX improvements)
-- **Stage 6**: Testing & Documentation (Cross-platform testing, final docs)
+- **Stage 6**: Testing & Documentation (Cross-platform testing, final documentation, v1.0 release)
+
+The IRC client now features comprehensive stability enhancements, auto-reconnect capabilities, configuration management, session statistics, and an enhanced user experience with improved formatting and status reporting.
 
 See the [build plan](docs/build_plan.md) for detailed progress and upcoming features.
 - [x] Basic project structure

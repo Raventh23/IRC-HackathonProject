@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple IRC Chat Client - Stage 4 Complete
-A robust IRC client with comprehensive error handling and validation.
+Simple IRC Chat Client - Stage 5: Polish & Stability
+Enhanced IRC client with connection reliability and improved user experience.
 """
 
 import socket
@@ -10,14 +10,16 @@ import time
 import re
 import logging
 import threading
-from datetime import datetime
+import argparse
+import json
+from datetime import datetime, timedelta
 
 
 class IRCClient:
-    """Enhanced IRC client with comprehensive error handling and validation."""
+    """Enhanced IRC client with Stage 5 polish and stability features."""
     
-    def __init__(self, server="irc.libera.chat", port=6667, nickname="SimpleBot", username="simple", realname="Simple IRC Client", debug=False):
-        """Initialize IRC client with server details."""
+    def __init__(self, server="irc.libera.chat", port=6667, nickname="SimpleBot", username="simple", realname="Simple IRC Client", debug=False, auto_reconnect=False, show_status_messages=True):
+        """Initialize IRC client with enhanced Stage 5 features."""
         self.server = server
         self.port = port
         self.nickname = nickname
@@ -36,6 +38,16 @@ class IRCClient:
         self.channel_users = {}  # Track users in channels
         self.last_ping_time = time.time()
         self.connection_stable = True
+        
+        # Stage 5 enhancements
+        self.auto_reconnect = auto_reconnect
+        self.show_status_messages = show_status_messages
+        self.uptime_start = None
+        self.total_messages_sent = 0
+        self.total_messages_received = 0
+        self.reconnect_attempts = 0
+        self.max_reconnect_attempts = 5
+        self.reconnect_delay = 30
         
         # IRC validation patterns
         self.nick_pattern = re.compile(r'^[a-zA-Z\[\]\\`_^{|}][a-zA-Z0-9\[\]\\`_^{|}-]*$')
