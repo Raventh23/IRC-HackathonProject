@@ -21,9 +21,9 @@ class IRCClientGUI:
     def __init__(self):
         """Initialize the GUI application."""
         self.root = tk.Tk()
-        self.root.title("IRC Chat Client - GUI")
+        self.root.title("IRC Chat Client")
         self.root.geometry("800x600")
-        self.root.minsize(600, 400)
+        self.root.minsize(800, 600)
         
         # IRC client instance
         self.irc_client = None
@@ -43,39 +43,57 @@ class IRCClientGUI:
     
     def setup_window(self):
         """Set up the basic window structure and frames."""
-        # Main container
-        main_frame = ttk.Frame(self.root)
-        main_frame.pack(fill=tk.BOTH, expand=True, padx=5, pady=5)
+        # Configure root window
+        self.root.configure(bg='#f0f0f0')
+        
+        # Main container with padding
+        main_frame = ttk.Frame(self.root, padding="10")
+        main_frame.pack(fill=tk.BOTH, expand=True)
         
         # Top frame for connection status
         self.status_frame = ttk.Frame(main_frame)
-        self.status_frame.pack(fill=tk.X, pady=(0, 5))
+        self.status_frame.pack(fill=tk.X, pady=(0, 10))
         
-        # Status label
-        self.status_label = ttk.Label(self.status_frame, text="Status: Not connected")
+        # Connection status indicator
+        self.status_label = ttk.Label(
+            self.status_frame, 
+            text="● Disconnected", 
+            foreground="red",
+            font=("Arial", 10, "bold")
+        )
         self.status_label.pack(side=tk.LEFT)
         
-        # Middle section with chat and channels
-        middle_frame = ttk.Frame(main_frame)
-        middle_frame.pack(fill=tk.BOTH, expand=True, pady=(0, 5))
+        # Current channel indicator
+        self.channel_label = ttk.Label(
+            self.status_frame, 
+            text="No channel selected",
+            font=("Arial", 10)
+        )
+        self.channel_label.pack(side=tk.RIGHT)
         
-        # Left frame for channel list (placeholder for now)
-        self.channel_frame = ttk.LabelFrame(middle_frame, text="Channels", width=150)
-        self.channel_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 5))
-        self.channel_frame.pack_propagate(False)
+        # Middle section with paned window for resizable sections
+        self.paned_window = ttk.PanedWindow(main_frame, orient=tk.HORIZONTAL)
+        self.paned_window.pack(fill=tk.BOTH, expand=True, pady=(0, 10))
         
-        # Center frame for chat display (placeholder for now)
-        self.chat_frame = ttk.LabelFrame(middle_frame, text="Chat")
-        self.chat_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        # Left frame for channel list
+        self.channel_frame = ttk.LabelFrame(self.paned_window, text="Channels", padding="5")
+        self.channel_frame.configure(width=200)
+        self.paned_window.add(self.channel_frame, weight=0)
         
-        # Bottom frame for message input (placeholder for now)
+        # Right frame for chat display
+        self.chat_frame = ttk.LabelFrame(self.paned_window, text="Chat", padding="5")
+        self.paned_window.add(self.chat_frame, weight=1)
+        
+        # Bottom frame for message input
         self.input_frame = ttk.Frame(main_frame)
-        self.input_frame.pack(fill=tk.X)
+        self.input_frame.pack(fill=tk.X, pady=(0, 5))
         
-        # Placeholder labels for development
-        ttk.Label(self.channel_frame, text="Channel list\n(Coming in Step 5)").pack(pady=20)
-        ttk.Label(self.chat_frame, text="Chat display area\n(Coming in Step 3)").pack(pady=50)
-        ttk.Label(self.input_frame, text="Message input area (Coming in Step 4)").pack(pady=10)
+        # Add separators for visual clarity
+        separator1 = ttk.Separator(main_frame, orient='horizontal')
+        separator1.pack(fill=tk.X, pady=(5, 10))
+        
+        # Configure window closing behavior
+        self.root.protocol("WM_DELETE_WINDOW", self.on_closing)
     
     def check_messages(self):
         """Check for messages from IRC client thread (for future use)."""
@@ -89,6 +107,29 @@ class IRCClientGUI:
         
         # Schedule next check
         self.root.after(100, self.check_messages)
+    
+    def on_closing(self):
+        """Handle window closing event."""
+        if self.connected and self.irc_client:
+            # Disconnect from IRC before closing
+            try:
+                self.irc_client.disconnect()
+            except:
+                pass
+        self.root.destroy()
+    
+    def update_status(self, status, color="black"):
+        """Update the connection status display."""
+        self.status_label.config(text=f"● {status}", foreground=color)
+    
+    def update_channel_display(self, channel=None):
+        """Update the current channel display."""
+        if channel:
+            self.current_channel = channel
+            self.channel_label.config(text=f"Channel: {channel}")
+        else:
+            self.current_channel = None
+            self.channel_label.config(text="No channel selected")
     
     def run(self):
         """Start the GUI application."""
