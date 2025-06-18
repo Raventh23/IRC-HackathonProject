@@ -1,0 +1,7 @@
+# No external dependencies required for core functionality
+# This file is kept for future use when adding optional dependencies
+
+# Future optional dependencies:
+# pytest>=6.0.0          # For unit testing
+# black>=21.0.0          # For code formatting  
+# flake8>=3.8.0          # For code linting
