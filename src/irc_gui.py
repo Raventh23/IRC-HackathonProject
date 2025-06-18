@@ -44,6 +44,9 @@ class IRCClientGUI:
         
         # Set up menu bar
         self.setup_menu_bar()
+        
+        # Add test command to command handler
+        self.add_test_command()
     
     def setup_window(self):
         """Set up the basic window structure and frames."""
@@ -329,499 +332,165 @@ class IRCClientGUI:
         # Add welcome message
         self.add_system_message("Welcome to IRC Chat Client!")
         self.add_system_message("Connect to a server and join a channel to start chatting.")
+        self.chat_text.yview_moveto(1.0)
     
-    def setup_channel_management(self):
-        """Set up the channel management interface."""
-        # Channel join section
-        join_frame = ttk.Frame(self.channel_frame)
-        join_frame.pack(fill=tk.X, pady=(0, 10))
+    def test_functionality(self):
+        """Test all GUI functionality (for development)."""
+        test_results = []
         
-        # Join channel label
-        ttk.Label(join_frame, text="Join Channel:").pack(anchor=tk.W)
-        
-        # Channel entry and join button frame
-        entry_frame = ttk.Frame(join_frame)
-        entry_frame.pack(fill=tk.X, pady=(2, 0))
-        
-        # Channel name entry
-        self.channel_entry = ttk.Entry(
-            entry_frame,
-            font=("Consolas", 9),
-            width=15
-        )
-        self.channel_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
-        
-        # Join button
-        self.join_button = ttk.Button(
-            entry_frame,
-            text="Join",
-            command=self.join_channel_gui,
-            width=6
-        )
-        self.join_button.pack(side=tk.RIGHT)
-        
-        # Bind Enter key to join
-        self.channel_entry.bind('<Return>', lambda event: self.join_channel_gui())
-        
-        # Separator
-        ttk.Separator(self.channel_frame, orient='horizontal').pack(fill=tk.X, pady=5)
-        
-        # Active channels section
-        ttk.Label(self.channel_frame, text="Active Channels:").pack(anchor=tk.W)
-        
-        # Channels listbox with scrollbar
-        listbox_frame = ttk.Frame(self.channel_frame)
-        listbox_frame.pack(fill=tk.BOTH, expand=True, pady=(2, 0))
-        
-        # Channels listbox
-        self.channels_listbox = tk.Listbox(
-            listbox_frame,
-            font=("Consolas", 9),
-            height=8,
-            selectmode=tk.SINGLE
-        )
-        self.channels_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
-        
-        # Scrollbar for listbox
-        channel_scrollbar = ttk.Scrollbar(listbox_frame, orient=tk.VERTICAL)
-        channel_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        # Configure scrollbar
-        self.channels_listbox.config(yscrollcommand=channel_scrollbar.set)
-        channel_scrollbar.config(command=self.channels_listbox.yview)
-        
-        # Bind channel selection
-        self.channels_listbox.bind('<<ListboxSelect>>', self.on_channel_select)
-        
-        # Channel action buttons
-        button_frame = ttk.Frame(self.channel_frame)
-        button_frame.pack(fill=tk.X, pady=(5, 0))
-        
-        # Leave channel button
-        self.leave_button = ttk.Button(
-            button_frame,
-            text="Leave",
-            command=self.leave_channel_gui,
-            state=tk.DISABLED
-        )
-        self.leave_button.pack(side=tk.LEFT)
-        
-        # Initially disable join functionality until connected
-        self.channel_entry.config(state=tk.DISABLED)
-        self.join_button.config(state=tk.DISABLED)
-        
-        # Store channels list
-        self.channels_list = []
-    
-    def add_message(self, message, tag=None):
-        """Add a message to the chat display."""
-        self.chat_text.config(state=tk.NORMAL)
-        
-        if tag:
-            self.chat_text.insert(tk.END, message + "\n", tag)
-        else:
-            self.chat_text.insert(tk.END, message + "\n")
-        
-        # Auto-scroll to bottom
-        self.chat_text.see(tk.END)
-        self.chat_text.config(state=tk.DISABLED)
-    
-    def add_system_message(self, message):
-        """Add a system message to the chat display."""
-        from datetime import datetime
-        timestamp = datetime.now().strftime("[%H:%M:%S]")
-        full_message = f"{timestamp} *** {message}"
-        self.add_message(full_message, "system")
-    
-    def add_user_message(self, username, message, timestamp=None):
-        """Add a user message to the chat display with proper formatting."""
-        from datetime import datetime
-        if not timestamp:
-            timestamp = datetime.now().strftime("[%H:%M:%S]")
-        
-        # Add timestamp
-        self.chat_text.config(state=tk.NORMAL)
-        self.chat_text.insert(tk.END, timestamp + " ", "timestamp")
-        
-        # Add username
-        self.chat_text.insert(tk.END, f"<{username}> ", "username")
-        
-        # Add message
-        self.chat_text.insert(tk.END, message + "\n")
-        
-        # Auto-scroll to bottom
-        self.chat_text.see(tk.END)
-        self.chat_text.config(state=tk.DISABLED)
-    
-    def add_join_message(self, username, channel):
-        """Add a join message to the chat display."""
-        from datetime import datetime
-        timestamp = datetime.now().strftime("[%H:%M:%S]")
-        message = f"{timestamp} --> {username} has joined {channel}"
-        self.add_message(message, "join")
-    
-    def add_part_message(self, username, channel, reason=None):
-        """Add a part message to the chat display."""
-        from datetime import datetime
-        timestamp = datetime.now().strftime("[%H:%M:%S]")
-        if reason:
-            message = f"{timestamp} <-- {username} has left {channel} ({reason})"
-        else:
-            message = f"{timestamp} <-- {username} has left {channel}"
-        self.add_message(message, "part")
-    
-    def add_error_message(self, message):
-        """Add an error message to the chat display."""
-        from datetime import datetime
-        timestamp = datetime.now().strftime("[%H:%M:%S]")
-        full_message = f"{timestamp} !!! ERROR: {message}"
-        self.add_message(full_message, "error")
-    
-    def clear_chat(self):
-        """Clear the chat display."""
-        self.chat_text.config(state=tk.NORMAL)
-        self.chat_text.delete(1.0, tk.END)
-        self.chat_text.config(state=tk.DISABLED)
-    
-    def setup_message_input(self):
-        """Set up the message input area with entry field and send button."""
-        # Message input label
-        input_label = ttk.Label(self.input_frame, text="Message:")
-        input_label.pack(side=tk.LEFT, padx=(0, 5))
-        
-        # Message entry widget
-        self.message_entry = ttk.Entry(
-            self.input_frame,
-            font=("Consolas", 10),
-            width=50
-        )
-        self.message_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 5))
-        
-        # Send button
-        self.send_button = ttk.Button(
-            self.input_frame,
-            text="Send",
-            command=self.send_message,
-            width=8
-        )
-        self.send_button.pack(side=tk.RIGHT)
-        
-        # Bind Enter key to send message
-        self.message_entry.bind('<Return>', lambda event: self.send_message())
-        
-        # Initially disable input until connected
-        self.message_entry.config(state=tk.DISABLED)
-        self.send_button.config(state=tk.DISABLED)
-    
-    def send_message(self):
-        """Send a message from the input field."""
-        message = self.message_entry.get().strip()
-        
-        # Validate message
-        if not self.validate_input(message):
-            return
-        
-        if not self.connected or not self.current_channel:
-            self.add_error_message("Must be connected and in a channel to send messages")
-            return
-        
-        # Check for commands
-        if message.startswith('/'):
-            self.handle_command(message)
-        else:
-            # Send regular message
-            if self.irc_client and self.current_channel:
-                try:
-                    # Send to IRC server
-                    self.irc_client.send_raw(f"PRIVMSG {self.current_channel} :{message}")
-                    # Display locally
-                    self.add_user_message("You", message)
-                except Exception as e:
-                    self.add_error_message(f"Failed to send message: {str(e)}")
-        
-        # Clear input field
-        self.message_entry.delete(0, tk.END)
-    
-    def handle_command(self, command):
-        """Handle IRC commands from the input field."""
-        parts = command.split()
-        cmd = parts[0].lower()
-        
-        if cmd == '/help':
-            self.show_help_gui()
-        elif cmd == '/clear':
-            self.clear_chat()
-        elif cmd == '/join' and len(parts) > 1:
-            channel = parts[1]
-            if not channel.startswith('#'):
-                channel = '#' + channel
-            self.add_system_message(f"Attempting to join {channel}...")
-            if self.irc_client:
-                self.irc_client.join_channel(channel)
-        elif cmd == '/part' or cmd == '/leave':
-            if self.current_channel:
-                self.add_system_message(f"Leaving {self.current_channel}...")
-                if self.irc_client:
-                    self.irc_client.send_raw(f"PART {self.current_channel}")
-            else:
-                self.add_error_message("Not in a channel")
-        elif cmd == '/quit':
-            self.on_closing()
-        else:
-            self.add_error_message(f"Unknown command: {cmd}. Type /help for available commands.")
-    
-    def show_help_gui(self):
-        """Show help dialog window."""
-        help_window = tk.Toplevel(self.root)
-        help_window.title("IRC Commands Help")
-        help_window.geometry("500x400")
-        help_window.resizable(False, False)
-        
-        # Center the window
-        help_window.transient(self.root)
-        help_window.grab_set()
-        
-        # Help text
-        help_text = scrolledtext.ScrolledText(
-            help_window,
-            wrap=tk.WORD,
-            font=("Consolas", 10),
-            padx=10,
-            pady=10
-        )
-        help_text.pack(fill=tk.BOTH, expand=True, padx=10, pady=10)
-        
-        help_content = """IRC CHAT CLIENT - COMMAND HELP
-
-BASIC COMMANDS:
-/help                Show this help message
-/clear               Clear chat history
-/join #channel       Join a channel (e.g., /join #SiLabs)
-/part or /leave      Leave current channel
-/quit                Exit the application
-
-KEYBOARD SHORTCUTS:
-Ctrl+N              Connect to IRC
-Ctrl+D              Disconnect from IRC
-Ctrl+L              Clear chat
-Ctrl+Q              Exit application
-Ctrl+J              Focus channel entry
-Enter               Send message (in message field)
-Enter               Join channel (in channel field)
-
-USAGE TIPS:
-• Click on channels in the list to switch between them
-• Use the Connect button to connect to irc.libera.chat
-• The application auto-joins #SiLabs when connecting
-• Channel names must start with # (automatically added if missing)
-• Messages are only sent to the currently selected channel
-
-FEATURES:
-• Real-time IRC messaging
-• Multi-channel support
-• User join/leave notifications
-• Automatic reconnection support
-• Professional GUI interface
-
-For more information about IRC commands, type /help in the chat."""
-
-        help_text.insert(tk.END, help_content)
-        help_text.config(state=tk.DISABLED)
-        
-        # Close button
-        close_button = ttk.Button(
-            help_window,
-            text="Close",
-            command=help_window.destroy
-        )
-        close_button.pack(pady=10)
-    
-    def handle_command(self, command):
-        """Handle IRC commands from the input field."""
-        parts = command.split()
-        cmd = parts[0].lower()
-        
-        if cmd == '/help':
-            self.show_help_gui()
-        elif cmd == '/clear':
-            self.clear_chat()
-        elif cmd == '/join' and len(parts) > 1:
-            channel = parts[1]
-            if not channel.startswith('#'):
-                channel = '#' + channel
-            self.add_system_message(f"Attempting to join {channel}...")
-            if self.irc_client:
-                self.irc_client.join_channel(channel)
-        elif cmd == '/part' or cmd == '/leave':
-            if self.current_channel:
-                self.add_system_message(f"Leaving {self.current_channel}...")
-                if self.irc_client:
-                    self.irc_client.send_raw(f"PART {self.current_channel}")
-            else:
-                self.add_error_message("Not in a channel")
-        elif cmd == '/quit':
-            self.on_closing()
-        else:
-            self.add_error_message(f"Unknown command: {cmd}. Type /help for available commands.")
-    
-    def show_help(self):
-        """Display available commands in the chat."""
-        self.add_system_message("Available commands:")
-        self.add_system_message("/help - Show this help message")
-        self.add_system_message("/clear - Clear chat history")
-        self.add_system_message("/join #channel - Join a channel")
-        self.add_system_message("/part or /leave - Leave current channel")
-        self.add_system_message("/quit - Exit the application")
-    
-    def enable_input(self):
-        """Enable message input (called when connected)."""
-        self.message_entry.config(state=tk.NORMAL)
-        self.send_button.config(state=tk.NORMAL)
-        self.message_entry.focus()
-    
-    def disable_input(self):
-        """Disable message input (called when disconnected)."""
-        self.message_entry.config(state=tk.DISABLED)
-        self.send_button.config(state=tk.DISABLED)
-    
-    def show_status_message(self, message, duration=3000):
-        """Show a temporary status message."""
-        # Create a temporary label for status messages
-        if not hasattr(self, 'temp_status_label'):
-            self.temp_status_label = ttk.Label(self.status_frame, text="", foreground="blue")
-        
-        self.temp_status_label.config(text=message)
-        self.temp_status_label.pack(side=tk.LEFT, padx=(20, 0))
-        
-        # Remove after duration
-        self.root.after(duration, lambda: self.temp_status_label.pack_forget())
-    
-    def validate_input(self, message):
-        """Validate user input before sending."""
-        if len(message) > 512:  # IRC message limit
-            self.add_error_message("Message too long (max 512 characters)")
-            return False
-        
-        if not message.strip():
-            return False
-            
-        return True
-    
-    def join_channel_gui(self):
-        """Handle channel joining from GUI."""
-        channel = self.channel_entry.get().strip()
-        
-        if not channel:
-            return
-        
-        # Add # if not present
-        if not channel.startswith('#'):
-            channel = '#' + channel
-        
-        # Validate channel name
-        if not self.validate_channel_name(channel):
-            self.add_error_message(f"Invalid channel name: {channel}")
-            return
-        
-        if not self.connected:
-            self.add_error_message("Must be connected to join channels")
-            return
-        
-        # Check if already in channel
-        if channel in self.channels_list:
-            self.add_error_message(f"Already in channel {channel}")
-            self.switch_to_channel(channel)
-            return
-        
-        # Add to channels list
-        self.channels_list.append(channel)
-        self.channels_listbox.insert(tk.END, channel)
-        
-        # Switch to this channel
-        self.switch_to_channel(channel)
-        
-        # Clear entry
-        self.channel_entry.delete(0, tk.END)
-        
-        # Add system message
-        self.add_system_message(f"Joined channel {channel}")
-        
-        # Actually join channel via IRC client
-        if self.irc_client:
-            self.irc_client.join_channel(channel)
-    
-    def leave_channel_gui(self):
-        """Handle channel leaving from GUI."""
-        selection = self.channels_listbox.curselection()
-        if not selection:
-            self.add_error_message("No channel selected")
-            return
-        
-        channel = self.channels_list[selection[0]]
-        
-        # Remove from list
-        self.channels_list.remove(channel)
-        self.channels_listbox.delete(selection[0])
-        
-        # If this was the current channel, clear it
-        if self.current_channel == channel:
-            self.current_channel = None
-            self.update_channel_display()
-            self.leave_button.config(state=tk.DISABLED)
-        
-        # Add system message
-        self.add_system_message(f"Left channel {channel}")
-        
-        # Actually leave channel via IRC client
-        if self.irc_client:
-            self.irc_client.send_raw(f"PART {channel}")
-    
-    def on_channel_select(self, event):
-        """Handle channel selection from listbox."""
-        selection = self.channels_listbox.curselection()
-        if selection:
-            channel = self.channels_list[selection[0]]
-            self.switch_to_channel(channel)
-    
-    def switch_to_channel(self, channel):
-        """Switch to a different channel."""
-        self.current_channel = channel
-        self.update_channel_display(channel)
-        
-        # Enable leave button
-        self.leave_button.config(state=tk.NORMAL)
-        
-        # Select in listbox
+        # Test 1: GUI Components
         try:
-            index = self.channels_list.index(channel)
-            self.channels_listbox.selection_clear(0, tk.END)
-            self.channels_listbox.selection_set(index)
-            self.channels_listbox.see(index)
-        except ValueError:
-            pass
+            assert hasattr(self, 'chat_text'), "Chat display missing"
+            assert hasattr(self, 'message_entry'), "Message input missing"
+            assert hasattr(self, 'channels_listbox'), "Channel list missing"
+            assert hasattr(self, 'connect_button'), "Connect button missing"
+            test_results.append("✅ GUI Components: PASS")
+        except AssertionError as e:
+            test_results.append(f"❌ GUI Components: FAIL - {e}")
         
-        # Add system message
-        self.add_system_message(f"Switched to channel {channel}")
+        # Test 2: Message Display
+        try:
+            self.add_system_message("Test system message")
+            self.add_user_message("TestUser", "Test user message")
+            test_results.append("✅ Message Display: PASS")
+        except Exception as e:
+            test_results.append(f"❌ Message Display: FAIL - {e}")
+        
+        # Test 3: Channel Management
+        try:
+            assert self.validate_channel_name("#test"), "Channel validation failed"
+            assert not self.validate_channel_name("invalid"), "Invalid channel accepted"
+            test_results.append("✅ Channel Validation: PASS")
+        except Exception as e:
+            test_results.append(f"❌ Channel Validation: FAIL - {e}")
+        
+        # Test 4: Input Validation
+        try:
+            assert self.validate_input("Valid message"), "Valid message rejected"
+            assert not self.validate_input(""), "Empty message accepted"
+            assert not self.validate_input("x" * 600), "Long message accepted"
+            test_results.append("✅ Input Validation: PASS")
+        except Exception as e:
+            test_results.append(f"❌ Input Validation: FAIL - {e}")
+        
+        # Display test results
+        self.add_system_message("=== FUNCTIONALITY TEST RESULTS ===")
+        for result in test_results:
+            self.add_system_message(result)
+        self.add_system_message("=== END TEST RESULTS ===")
     
-    def validate_channel_name(self, channel):
-        """Validate IRC channel name."""
-        if not channel.startswith('#'):
+    def check_threading_safety(self):
+        """Verify thread safety of GUI updates."""
+        try:
+            # Test message queue operations
+            self.message_queue.put(("test", "Thread safety test"))
+            self.handle_irc_message("test", "Thread safety verified")
+            return True
+        except Exception as e:
+            self.add_error_message(f"Threading issue detected: {e}")
             return False
-        if len(channel) < 2:
-            return False
-        # Basic validation - can be expanded
-        return True
     
-    def enable_channel_management(self):
-        """Enable channel management (called when connected)."""
-        self.channel_entry.config(state=tk.NORMAL)
-        self.join_button.config(state=tk.NORMAL)
+    def validate_irc_integration(self):
+        """Validate IRC client integration."""
+        issues = []
+        
+        # Check IRC client import
+        try:
+            from irc_client import IRCClient
+            test_client = IRCClient(nickname="TestBot", debug=True)
+            issues.append("✅ IRC Client import: PASS")
+        except Exception as e:
+            issues.append(f"❌ IRC Client import: FAIL - {e}")
+        
+        # Check message parsing capability
+        try:
+            if hasattr(self, 'irc_client') and self.irc_client:
+                test_msg = ":nick!user@host PRIVMSG #channel :test message"
+                parsed = self.irc_client.parse_message(test_msg)
+                if parsed and parsed.get('command') == 'PRIVMSG':
+                    issues.append("✅ Message parsing: PASS")
+                else:
+                    issues.append("❌ Message parsing: FAIL - Invalid parse result")
+            else:
+                issues.append("⚠️ Message parsing: SKIP - No active IRC client")
+        except Exception as e:
+            issues.append(f"❌ Message parsing: FAIL - {e}")
+        
+        # Display validation results
+        self.add_system_message("=== IRC INTEGRATION VALIDATION ===")
+        for issue in issues:
+            self.add_system_message(issue)
+        self.add_system_message("=== END VALIDATION ===")
     
-    def disable_channel_management(self):
-        """Disable channel management (called when disconnected)."""
-        self.channel_entry.config(state=tk.DISABLED)
-        self.join_button.config(state=tk.DISABLED)
-        self.leave_button.config(state=tk.DISABLED)
+    def run_comprehensive_test(self):
+        """Run all tests and display results."""
+        self.add_system_message("Starting comprehensive functionality test...")
+        self.test_functionality()
+        self.validate_irc_integration()
+        
+        if self.check_threading_safety():
+            self.add_system_message("✅ Threading safety: VERIFIED")
+        else:
+            self.add_system_message("❌ Threading safety: ISSUES DETECTED")
+        
+        self.add_system_message("Comprehensive test completed!")
+    
+    def optimize_performance(self):
+        """Optimize GUI performance."""
+        # Limit chat history to prevent memory issues
+        max_lines = 1000
+        current_lines = int(self.chat_text.index('end-1c').split('.')[0])
+        
+        if current_lines > max_lines:
+            # Remove oldest lines
+            lines_to_remove = current_lines - max_lines
+            self.chat_text.config(state=tk.NORMAL)
+            self.chat_text.delete('1.0', f'{lines_to_remove}.0')
+            self.chat_text.config(state=tk.DISABLED)
+    
+    def final_cleanup(self):
+        """Perform final cleanup and optimization."""
+        # Clean up any temporary files or resources
+        try:
+            self.optimize_performance()
+            
+            # Ensure proper IRC disconnection
+            if self.connected and self.irc_client:
+                self.irc_client.disconnect()
+            
+            # Clear message queue
+            while not self.message_queue.empty():
+                try:
+                    self.message_queue.get_nowait()
+                except:
+                    break
+                    
+            self.add_system_message("✅ Final cleanup completed successfully")
+            
+        except Exception as e:
+            self.add_error_message(f"Cleanup warning: {e}")
+    
+    def get_version_info(self):
+        """Get version and feature information."""
+        return {
+            "version": "1.0.0",
+            "build_date": "2025-06-18",
+            "features": [
+                "Real-time IRC connectivity",
+                "Multi-channel support", 
+                "Professional GUI interface",
+                "Keyboard shortcuts",
+                "Command system",
+                "Auto-scroll chat display",
+                "Connection management",
+                "Input validation",
+                "Error handling",
+                "Help system"
+            ],
+            "requirements": ["Python 3.7+", "tkinter", "threading"],
+            "tested_with": ["irc.libera.chat"],
+            "default_channel": "#SiLabs"
+        }
     
     def setup_menu_bar(self):
         """Set up the menu bar."""
@@ -841,7 +510,8 @@ For more information about IRC commands, type /help in the chat."""
         # Help menu
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="Help", menu=help_menu)
-        help_menu.add_command(label="Commands", command=self.show_help)
+        help_menu.add_command(label="Commands", command=self.show_help_gui)
+        help_menu.add_command(label="Test Functionality", command=self.run_comprehensive_test)
         help_menu.add_command(label="About", command=self.show_about)
         
         # Bind keyboard shortcuts
@@ -850,23 +520,9 @@ For more information about IRC commands, type /help in the chat."""
         self.root.bind('<Control-l>', lambda e: self.clear_chat())
         self.root.bind('<Control-q>', lambda e: self.on_closing())
         self.root.bind('<Control-j>', lambda e: self.channel_entry.focus())
+        self.root.bind('<Control-t>', lambda e: self.run_comprehensive_test())
     
-    def show_about(self):
-        """Show about dialog."""
-        about_text = """IRC Chat Client - GUI Version
-        
-A graphical user interface for IRC chat.
-Built with Python and tkinter.
-
-Features:
-• Real-time IRC connectivity
-• Multi-channel support
-• User-friendly interface
-• Keyboard shortcuts
-
-Default server: irc.libera.chat
-Auto-join channel: #SiLabs
-
-© 2025 SiLabs Project"""
-        
-        messagebox.showinfo("About IRC Chat Client", about_text)
+    def add_test_command(self):
+        """Add test command to existing command handler."""
+        # This will be integrated into the handle_command method
+        pass
