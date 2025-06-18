@@ -9,6 +9,7 @@ import sys
 import time
 import re
 import logging
+from datetime import datetime
 
 
 class IRCClient:
@@ -26,6 +27,8 @@ class IRCClient:
         self.registered = False
         self.buffer = ""  # Buffer for incomplete messages
         self.debug = debug
+        self.current_channel = None
+        self.channels = set()  # Track joined channels
         
         # Set up logging if debug enabled
         if self.debug:
@@ -38,6 +41,10 @@ class IRCClient:
         """Log debug message if debugging is enabled."""
         if self.logger:
             self.logger.debug(message)
+    
+    def format_timestamp(self):
+        """Return current time formatted for display."""
+        return datetime.now().strftime("%H:%M")
     
     def connect(self):
         """Establish TCP connection to IRC server."""
@@ -129,7 +136,7 @@ class IRCClient:
     def parse_message(self, raw_message):
         """Parse IRC message into components."""
         # IRC message format: [:prefix] <command> [params] [:trailing]
-        message = {'raw': raw_message, 'prefix': '', 'command': '', 'params': [], 'trailing': ''}
+        message = {'raw': raw_message, 'prefix': '', 'command': '', 'params': [], 'trailing': '', 'nick': '', 'host': ''}
         
         working_msg = raw_message
         
@@ -139,6 +146,12 @@ class IRCClient:
             if prefix_end != -1:
                 message['prefix'] = working_msg[1:prefix_end]
                 working_msg = working_msg[prefix_end + 1:]
+                
+                # Extract nickname from prefix (nick!user@host format)
+                if '!' in message['prefix']:
+                    message['nick'] = message['prefix'].split('!')[0]
+                    if '@' in message['prefix']:
+                        message['host'] = message['prefix'].split('@')[1]
         
         # Extract trailing if present
         trailing_start = working_msg.find(' :')
@@ -215,6 +228,126 @@ class IRCClient:
         self.log_debug("Registration timed out after 30 seconds")
         return False
     
+    def join_channel(self, channel):
+        """Join an IRC channel."""
+        if not self.registered:
+            print("Error: Must be registered before joining channels")
+            return False
+        
+        if not channel.startswith('#'):
+            channel = '#' + channel
+        
+        print(f"Joining channel {channel}...")
+        self.log_debug(f"Attempting to join channel: {channel}")
+        
+        if not self.send_raw(f"JOIN {channel}"):
+            return False
+        
+        # Wait for join confirmation
+        start_time = time.time()
+        while time.time() - start_time < 15:  # 15 second timeout
+            messages = self.receive_raw()
+            for raw_msg in messages:
+                print(f"<<< {raw_msg}")
+                msg = self.parse_message(raw_msg)
+                
+                # Handle PING
+                if msg['command'] == 'PING':
+                    pong_response = f"PONG :{msg['trailing']}"
+                    self.send_raw(pong_response)
+                
+                # Check for successful join (we receive our own JOIN message)
+                elif msg['command'] == 'JOIN' and msg['nick'] == self.nickname:
+                    joined_channel = msg['params'][0] if msg['params'] else msg['trailing']
+                    print(f"Successfully joined {joined_channel}!")
+                    self.current_channel = joined_channel
+                    self.channels.add(joined_channel)
+                    self.log_debug(f"Successfully joined channel: {joined_channel}")
+                    return True
+                
+                # Handle channel topic (332)
+                elif msg['command'] == '332':
+                    topic_channel = msg['params'][1] if len(msg['params']) > 1 else ""
+                    topic = msg['trailing']
+                    print(f"[{self.format_timestamp()}] Topic for {topic_channel}: {topic}")
+                
+                # Handle names list (353)
+                elif msg['command'] == '353':
+                    names_channel = msg['params'][2] if len(msg['params']) > 2 else ""
+                    names = msg['trailing'].split()
+                    print(f"[{self.format_timestamp()}] Users in {names_channel}: {', '.join(names)}")
+                
+                # Handle end of names (366)
+                elif msg['command'] == '366':
+                    end_channel = msg['params'][1] if len(msg['params']) > 1 else ""
+                    print(f"[{self.format_timestamp()}] End of names list for {end_channel}")
+                
+                # Check for join errors
+                elif msg['command'].isdigit() and msg['command'].startswith('4'):
+                    error_msg = msg['trailing']
+                    print(f"Join error: {error_msg}")
+                    self.log_debug(f"Join error code: {msg['command']}")
+                    return False
+            
+            time.sleep(0.1)
+        
+        print("Join timed out")
+        self.log_debug("Join operation timed out")
+        return False
+    
+    def send_message(self, channel, message):
+        """Send a message to a channel."""
+        if not self.registered:
+            print("Error: Must be registered before sending messages")
+            return False
+        
+        if not channel.startswith('#'):
+            channel = '#' + channel
+        
+        return self.send_raw(f"PRIVMSG {channel} :{message}")
+    
+    def format_channel_message(self, msg):
+        """Format a channel message for display."""
+        if msg['command'] == 'PRIVMSG':
+            channel = msg['params'][0] if msg['params'] else ""
+            sender = msg['nick']
+            message_text = msg['trailing']
+            timestamp = self.format_timestamp()
+            
+            # Check if it's an action message (/me)
+            if message_text.startswith('\x01ACTION ') and message_text.endswith('\x01'):
+                action_text = message_text[8:-1]  # Remove \x01ACTION and \x01
+                return f"[{timestamp}] * {sender} {action_text}"
+            else:
+                return f"[{timestamp}] <{sender}> {message_text}"
+        
+        elif msg['command'] == 'JOIN':
+            joined_channel = msg['params'][0] if msg['params'] else msg['trailing']
+            joiner = msg['nick']
+            timestamp = self.format_timestamp()
+            return f"[{timestamp}] --> {joiner} has joined {joined_channel}"
+        
+        elif msg['command'] == 'PART':
+            left_channel = msg['params'][0] if msg['params'] else ""
+            leaver = msg['nick']
+            part_message = msg['trailing']
+            timestamp = self.format_timestamp()
+            if part_message:
+                return f"[{timestamp}] <-- {leaver} has left {left_channel} ({part_message})"
+            else:
+                return f"[{timestamp}] <-- {leaver} has left {left_channel}"
+        
+        elif msg['command'] == 'QUIT':
+            quitter = msg['nick']
+            quit_message = msg['trailing']
+            timestamp = self.format_timestamp()
+            if quit_message:
+                return f"[{timestamp}] <-- {quitter} has quit ({quit_message})"
+            else:
+                return f"[{timestamp}] <-- {quitter} has quit"
+        
+        return None
+    
     def handle_ping_pong(self):
         """Handle PING/PONG keepalive messages."""
         messages = self.receive_raw()
@@ -268,54 +401,68 @@ class IRCClient:
 
 
 def main():
-    """Main function to test IRC protocol basics."""
-    print("Simple IRC Chat Client - Stage 2 Complete Test")
-    print("===============================================")
+    """Main function to test Stage 3.1 - Channel Operations."""
+    print("Simple IRC Chat Client - Stage 3.1 Test")
+    print("========================================")
     
-    # Create client instance with unique nickname and debug enabled
+    # Create client instance with unique nickname
     import random
     test_nick = f"TestBot{random.randint(1000, 9999)}"
-    client = IRCClient(nickname=test_nick, debug=True)
+    client = IRCClient(nickname=test_nick, debug=False)
     
-    # Test connection
+    # Test connection and registration
     if not client.connect():
         print("Connection failed!")
         sys.exit(1)
     
-    # Test registration
     if not client.register():
         print("Registration failed!")
         client.disconnect()
         sys.exit(1)
     
-    # Test some IRC commands using the new send_command method
-    print("\nTesting IRC commands...")
-    client.send_command("VERSION")
-    client.send_command("TIME")
+    # Test joining a channel
+    test_channel = "#bottest"  # Use a bot testing channel
+    if not client.join_channel(test_channel):
+        print(f"Failed to join {test_channel}")
+        client.disconnect()
+        sys.exit(1)
     
-    # Test PING/PONG handling for a few seconds
-    print("Testing PING/PONG handling for 5 seconds...")
+    # Test sending a message
+    test_message = f"Hello from {test_nick}! Testing Stage 3.1"
+    print(f"Sending test message: {test_message}")
+    client.send_message(test_channel, test_message)
+    
+    # Listen for channel messages for 30 seconds
+    print("Listening for channel messages for 30 seconds...")
     start_time = time.time()
     message_count = 0
-    while time.time() - start_time < 5:
+    
+    while time.time() - start_time < 30:
         messages = client.receive_raw()
         for raw_msg in messages:
-            message_count += 1
             print(f"<<< {raw_msg}")
             msg = client.parse_message(raw_msg)
             
+            # Handle PING
             if msg['command'] == 'PING':
                 pong_response = f"PONG :{msg['trailing']}"
                 client.send_raw(pong_response)
                 print("Responded to PING")
+            
+            # Format and display channel messages
+            elif msg['command'] in ['PRIVMSG', 'JOIN', 'PART', 'QUIT']:
+                formatted = client.format_channel_message(msg)
+                if formatted:
+                    print(formatted)
+                    message_count += 1
         
         time.sleep(0.1)
     
-    print(f"Processed {message_count} messages")
+    print(f"Processed {message_count} channel messages")
     
     # Disconnect
     client.disconnect()
-    print("Stage 2 Complete: IRC Protocol Basics working perfectly!")
+    print("Stage 3.1 Complete: Channel Operations working!")
 
 
 if __name__ == "__main__":

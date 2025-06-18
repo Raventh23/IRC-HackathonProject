@@ -74,11 +74,11 @@ Based on the design document, this build plan breaks down the IRC chat developme
 **Goal**: Join channels and participate in chat
 
 **Tasks**:
-- [ ] Implement JOIN command
-- [ ] Parse channel messages (PRIVMSG)
-- [ ] Handle channel join confirmations
-- [ ] Display formatted channel messages
-- [ ] Basic timestamp formatting
+- [x] Implement JOIN command
+- [x] Parse channel messages (PRIVMSG)
+- [x] Handle channel join confirmations
+- [x] Display formatted channel messages
+- [x] Basic timestamp formatting
 
 **Deliverable**: Client that can join a channel and see messages
 
@@ -86,11 +86,11 @@ Based on the design document, this build plan breaks down the IRC chat developme
 **Goal**: Interactive terminal interface
 
 **Tasks**:
-- [ ] Implement threading for simultaneous send/receive
-- [ ] Create message display formatter
-- [ ] Add user input handling
-- [ ] Implement basic command parsing (/quit, /join)
-- [ ] Handle graceful shutdown
+- [x] Implement threading for simultaneous send/receive
+- [x] Create message display formatter
+- [x] Add user input handling
+- [x] Implement basic command parsing (/quit, /join)
+- [x] Handle graceful shutdown
 
 **Success Criteria**:
 - Can join #test channel and see live messages
