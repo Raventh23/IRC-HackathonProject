@@ -80,6 +80,9 @@ class IRCClientGUI:
         self.channel_frame.configure(width=200)
         self.paned_window.add(self.channel_frame, weight=0)
         
+        # Set up channel management
+        self.setup_channel_management()
+        
         # Right frame for chat display
         self.chat_frame = ttk.LabelFrame(self.paned_window, text="Chat", padding="5")
         self.paned_window.add(self.chat_frame, weight=1)
@@ -174,6 +177,89 @@ class IRCClientGUI:
         # Add welcome message
         self.add_system_message("Welcome to IRC Chat Client!")
         self.add_system_message("Connect to a server and join a channel to start chatting.")
+    
+    def setup_channel_management(self):
+        """Set up the channel management interface."""
+        # Channel join section
+        join_frame = ttk.Frame(self.channel_frame)
+        join_frame.pack(fill=tk.X, pady=(0, 10))
+        
+        # Join channel label
+        ttk.Label(join_frame, text="Join Channel:").pack(anchor=tk.W)
+        
+        # Channel entry and join button frame
+        entry_frame = ttk.Frame(join_frame)
+        entry_frame.pack(fill=tk.X, pady=(2, 0))
+        
+        # Channel name entry
+        self.channel_entry = ttk.Entry(
+            entry_frame,
+            font=("Consolas", 9),
+            width=15
+        )
+        self.channel_entry.pack(side=tk.LEFT, fill=tk.X, expand=True, padx=(0, 2))
+        
+        # Join button
+        self.join_button = ttk.Button(
+            entry_frame,
+            text="Join",
+            command=self.join_channel_gui,
+            width=6
+        )
+        self.join_button.pack(side=tk.RIGHT)
+        
+        # Bind Enter key to join
+        self.channel_entry.bind('<Return>', lambda event: self.join_channel_gui())
+        
+        # Separator
+        ttk.Separator(self.channel_frame, orient='horizontal').pack(fill=tk.X, pady=5)
+        
+        # Active channels section
+        ttk.Label(self.channel_frame, text="Active Channels:").pack(anchor=tk.W)
+        
+        # Channels listbox with scrollbar
+        listbox_frame = ttk.Frame(self.channel_frame)
+        listbox_frame.pack(fill=tk.BOTH, expand=True, pady=(2, 0))
+        
+        # Channels listbox
+        self.channels_listbox = tk.Listbox(
+            listbox_frame,
+            font=("Consolas", 9),
+            height=8,
+            selectmode=tk.SINGLE
+        )
+        self.channels_listbox.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
+        
+        # Scrollbar for listbox
+        channel_scrollbar = ttk.Scrollbar(listbox_frame, orient=tk.VERTICAL)
+        channel_scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
+        
+        # Configure scrollbar
+        self.channels_listbox.config(yscrollcommand=channel_scrollbar.set)
+        channel_scrollbar.config(command=self.channels_listbox.yview)
+        
+        # Bind channel selection
+        self.channels_listbox.bind('<<ListboxSelect>>', self.on_channel_select)
+        
+        # Channel action buttons
+        button_frame = ttk.Frame(self.channel_frame)
+        button_frame.pack(fill=tk.X, pady=(5, 0))
+        
+        # Leave channel button
+        self.leave_button = ttk.Button(
+            button_frame,
+            text="Leave",
+            command=self.leave_channel_gui,
+            state=tk.DISABLED
+        )
+        self.leave_button.pack(side=tk.LEFT)
+        
+        # Initially disable join functionality until connected
+        self.channel_entry.config(state=tk.DISABLED)
+        self.join_button.config(state=tk.DISABLED)
+        
+        # Store channels list
+        self.channels_list = []
     
     def add_message(self, message, tag=None):
         """Add a message to the chat display."""
@@ -346,3 +432,115 @@ class IRCClientGUI:
         """Disable message input (called when disconnected)."""
         self.message_entry.config(state=tk.DISABLED)
         self.send_button.config(state=tk.DISABLED)
+    
+    def join_channel_gui(self):
+        """Handle channel joining from GUI."""
+        channel = self.channel_entry.get().strip()
+        
+        if not channel:
+            return
+        
+        # Add # if not present
+        if not channel.startswith('#'):
+            channel = '#' + channel
+        
+        # Validate channel name
+        if not self.validate_channel_name(channel):
+            self.add_error_message(f"Invalid channel name: {channel}")
+            return
+        
+        if not self.connected:
+            self.add_error_message("Must be connected to join channels")
+            return
+        
+        # Check if already in channel
+        if channel in self.channels_list:
+            self.add_error_message(f"Already in channel {channel}")
+            self.switch_to_channel(channel)
+            return
+        
+        # Add to channels list
+        self.channels_list.append(channel)
+        self.channels_listbox.insert(tk.END, channel)
+        
+        # Switch to this channel
+        self.switch_to_channel(channel)
+        
+        # Clear entry
+        self.channel_entry.delete(0, tk.END)
+        
+        # Add system message
+        self.add_system_message(f"Joined channel {channel}")
+        
+        # TODO: Actually join channel via IRC client when integrated
+    
+    def leave_channel_gui(self):
+        """Handle channel leaving from GUI."""
+        selection = self.channels_listbox.curselection()
+        if not selection:
+            self.add_error_message("No channel selected")
+            return
+        
+        channel = self.channels_list[selection[0]]
+        
+        # Remove from list
+        self.channels_list.remove(channel)
+        self.channels_listbox.delete(selection[0])
+        
+        # If this was the current channel, clear it
+        if self.current_channel == channel:
+            self.current_channel = None
+            self.update_channel_display()
+            self.leave_button.config(state=tk.DISABLED)
+        
+        # Add system message
+        self.add_system_message(f"Left channel {channel}")
+        
+        # TODO: Actually leave channel via IRC client when integrated
+    
+    def on_channel_select(self, event):
+        """Handle channel selection from listbox."""
+        selection = self.channels_listbox.curselection()
+        if selection:
+            channel = self.channels_list[selection[0]]
+            self.switch_to_channel(channel)
+    
+    def switch_to_channel(self, channel):
+        """Switch to a different channel."""
+        self.current_channel = channel
+        self.update_channel_display(channel)
+        
+        # Enable leave button
+        self.leave_button.config(state=tk.NORMAL)
+        
+        # Select in listbox
+        try:
+            index = self.channels_list.index(channel)
+            self.channels_listbox.selection_clear(0, tk.END)
+            self.channels_listbox.selection_set(index)
+            self.channels_listbox.see(index)
+        except ValueError:
+            pass
+        
+        # Add system message
+        self.add_system_message(f"Switched to channel {channel}")
+    
+    def validate_channel_name(self, channel):
+        """Validate IRC channel name."""
+        if not channel.startswith('#'):
+            return False
+        if len(channel) < 2:
+            return False
+        # Basic validation - can be expanded
+        return True
+    
+    def enable_channel_management(self):
+        """Enable channel management (called when connected)."""
+        self.channel_entry.config(state=tk.NORMAL)
+        self.join_button.config(state=tk.NORMAL)
+    
+    def disable_channel_management(self):
+        """Disable channel management (called when disconnected)."""
+        self.channel_entry.config(state=tk.DISABLED)
+        self.join_button.config(state=tk.DISABLED)
+        self.leave_button.config(state=tk.DISABLED)
