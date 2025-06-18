@@ -84,6 +84,9 @@ class IRCClientGUI:
         self.chat_frame = ttk.LabelFrame(self.paned_window, text="Chat", padding="5")
         self.paned_window.add(self.chat_frame, weight=1)
         
+        # Chat display area with scrollbar
+        self.setup_chat_display()
+        
         # Bottom frame for message input
         self.input_frame = ttk.Frame(main_frame)
         self.input_frame.pack(fill=tk.X, pady=(0, 5))
@@ -137,11 +140,104 @@ class IRCClientGUI:
         self.root.mainloop()
 
 
-def main():
-    """Main function to start the GUI application."""
-    app = IRCClientGUI()
-    app.run()
-
-
-if __name__ == "__main__":
-    main()
+    def setup_chat_display(self):
+        """Set up the chat display area with scrollable text widget."""
+        # Create frame for chat display
+        chat_display_frame = ttk.Frame(self.chat_frame)
+        chat_display_frame.pack(fill=tk.BOTH, expand=True)
+        
+        # Create scrollable text widget for messages
+        self.chat_text = scrolledtext.ScrolledText(
+            chat_display_frame,
+            state=tk.DISABLED,  # Read-only
+            wrap=tk.WORD,
+            width=60,
+            height=25,
+            font=("Consolas", 10),
+            bg="#ffffff",
+            fg="#000000",
+            insertbackground="#000000"
+        )
+        self.chat_text.pack(fill=tk.BOTH, expand=True)
+        
+        # Configure text tags for different message types
+        self.chat_text.tag_configure("timestamp", foreground="#666666", font=("Consolas", 9))
+        self.chat_text.tag_configure("username", foreground="#0066cc", font=("Consolas", 10, "bold"))
+        self.chat_text.tag_configure("system", foreground="#008000", font=("Consolas", 10, "italic"))
+        self.chat_text.tag_configure("error", foreground="#cc0000", font=("Consolas", 10, "bold"))
+        self.chat_text.tag_configure("join", foreground="#00aa00")
+        self.chat_text.tag_configure("part", foreground="#aa0000")
+        
+        # Add welcome message
+        self.add_system_message("Welcome to IRC Chat Client!")
+        self.add_system_message("Connect to a server and join a channel to start chatting.")
+    
+    def add_message(self, message, tag=None):
+        """Add a message to the chat display."""
+        self.chat_text.config(state=tk.NORMAL)
+        
+        if tag:
+            self.chat_text.insert(tk.END, message + "\n", tag)
+        else:
+            self.chat_text.insert(tk.END, message + "\n")
+        
+        # Auto-scroll to bottom
+        self.chat_text.see(tk.END)
+        self.chat_text.config(state=tk.DISABLED)
+    
+    def add_system_message(self, message):
+        """Add a system message to the chat display."""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("[%H:%M:%S]")
+        full_message = f"{timestamp} *** {message}"
+        self.add_message(full_message, "system")
+    
+    def add_user_message(self, username, message, timestamp=None):
+        """Add a user message to the chat display with proper formatting."""
+        from datetime import datetime
+        if not timestamp:
+            timestamp = datetime.now().strftime("[%H:%M:%S]")
+        
+        # Add timestamp
+        self.chat_text.config(state=tk.NORMAL)
+        self.chat_text.insert(tk.END, timestamp + " ", "timestamp")
+        
+        # Add username
+        self.chat_text.insert(tk.END, f"<{username}> ", "username")
+        
+        # Add message
+        self.chat_text.insert(tk.END, message + "\n")
+        
+        # Auto-scroll to bottom
+        self.chat_text.see(tk.END)
+        self.chat_text.config(state=tk.DISABLED)
+    
+    def add_join_message(self, username, channel):
+        """Add a join message to the chat display."""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("[%H:%M:%S]")
+        message = f"{timestamp} --> {username} has joined {channel}"
+        self.add_message(message, "join")
+    
+    def add_part_message(self, username, channel, reason=None):
+        """Add a part message to the chat display."""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("[%H:%M:%S]")
+        if reason:
+            message = f"{timestamp} <-- {username} has left {channel} ({reason})"
+        else:
+            message = f"{timestamp} <-- {username} has left {channel}"
+        self.add_message(message, "part")
+    
+    def add_error_message(self, message):
+        """Add an error message to the chat display."""
+        from datetime import datetime
+        timestamp = datetime.now().strftime("[%H:%M:%S]")
+        full_message = f"{timestamp} !!! ERROR: {message}"
+        self.add_message(full_message, "error")
+    
+    def clear_chat(self):
+        """Clear the chat display."""
+        self.chat_text.config(state=tk.NORMAL)
+        self.chat_text.delete(1.0, tk.END)
+        self.chat_text.config(state=tk.DISABLED)
