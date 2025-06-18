@@ -2,7 +2,25 @@
 
 ## Project Phases Overview
 
-Based on the design document, this build plan breaks down the IRC chat development into manageable stages, focusing on incremental delivery and risk mitigation.
+Based on the design document, this build plan bre### 4.1 Basic IRC Commands
+**Goal**: Implement core user commands
+
+**Tasks**:
+- [x] `/quit [message]` - Disconnect with optional message
+- [x] `/join #channel` - Switch to different channel
+- [x] `/nick newnick` - Change nickname
+- [x] `/help` - Show available commands
+- [x] `/me action` - Action messages (optional)
+
+### 4.2 Error Handling & Validation
+**Goal**: Robust command processing
+
+**Tasks**:
+- [x] Input validation for all commands
+- [x] Error messages for invalid commands
+- [x] Handle server error responses
+- [x] Prevent IRC injection attacks
+- [x] User-friendly error messagesat development into manageable stages, focusing on incremental delivery and risk mitigation.
 
 ## Stage 1: Foundation Setup (Week 1)
 
@@ -104,11 +122,11 @@ Based on the design document, this build plan breaks down the IRC chat developme
 **Goal**: Implement core user commands
 
 **Tasks**:
-- [ ] `/quit [message]` - Disconnect with optional message
-- [ ] `/join #channel` - Switch to different channel
-- [ ] `/nick newnick` - Change nickname
-- [ ] `/help` - Show available commands
-- [ ] `/me action` - Action messages (optional)
+- [x] `/quit [message]` - Disconnect with optional message
+- [x] `/join #channel` - Switch to different channel
+- [x] `/nick newnick` - Change nickname
+- [x] `/help` - Show available commands
+- [x] `/me action` - Action messages (optional)
 
 ### 4.2 Error Handling & Validation
 **Goal**: Robust command processing

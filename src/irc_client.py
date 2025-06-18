@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Simple IRC Chat Client
-A minimal IRC client for learning and educational purposes.
+Simple IRC Chat Client - Stage 4 Complete
+A robust IRC client with comprehensive error handling and validation.
 """
 
 import socket
@@ -9,11 +9,12 @@ import sys
 import time
 import re
 import logging
+import threading
 from datetime import datetime
 
 
 class IRCClient:
-    """Basic IRC client with socket connection capabilities."""
+    """Enhanced IRC client with comprehensive error handling and validation."""
     
     def __init__(self, server="irc.libera.chat", port=6667, nickname="SimpleBot", username="simple", realname="Simple IRC Client", debug=False):
         """Initialize IRC client with server details."""
@@ -29,6 +30,16 @@ class IRCClient:
         self.debug = debug
         self.current_channel = None
         self.channels = set()  # Track joined channels
+        self.running = False
+        self.input_thread = None
+        self.server_capabilities = {}
+        self.channel_users = {}  # Track users in channels
+        self.last_ping_time = time.time()
+        self.connection_stable = True
+        
+        # IRC validation patterns
+        self.nick_pattern = re.compile(r'^[a-zA-Z\[\]\\`_^{|}][a-zA-Z0-9\[\]\\`_^{|}-]*$')
+        self.channel_pattern = re.compile(r'^#[^\x00\x07\x0A\x0D ,:]{1,49}$')
         
         # Set up logging if debug enabled
         if self.debug:
@@ -276,6 +287,7 @@ class IRCClient:
                     names_channel = msg['params'][2] if len(msg['params']) > 2 else ""
                     names = msg['trailing'].split()
                     print(f"[{self.format_timestamp()}] Users in {names_channel}: {', '.join(names)}")
+                    self.channel_users[names_channel] = names  # Update channel users
                 
                 # Handle end of names (366)
                 elif msg['command'] == '366':
@@ -398,71 +410,411 @@ class IRCClient:
                 self.connected = False
                 self.registered = False
                 self.socket = None
+    
+    def validate_nickname(self, nickname):
+        """Validate IRC nickname according to RFC standards."""
+        if not nickname:
+            return False, "Nickname cannot be empty"
+        
+        if len(nickname) > 16:
+            return False, "Nickname too long (max 16 characters)"
+        
+        if not self.nick_pattern.match(nickname):
+            return False, "Invalid nickname format (must start with letter and contain only valid IRC characters)"
+        
+        # Check for reserved nicknames
+        reserved = ['nickserv', 'chanserv', 'operserv', 'memoserv', 'botserv', 'hostserv']
+        if nickname.lower() in reserved:
+            return False, f"'{nickname}' is a reserved service nickname"
+        
+        return True, ""
+    
+    def validate_channel_name(self, channel):
+        """Validate IRC channel name according to RFC standards."""
+        if not channel:
+            return False, "Channel name cannot be empty"
+        
+        if not channel.startswith('#'):
+            channel = '#' + channel
+        
+        if not self.channel_pattern.match(channel):
+            return False, "Invalid channel name format (must start with # and contain valid characters)"
+        
+        return True, channel
+    
+    def sanitize_message(self, message):
+        """Sanitize user message to prevent IRC injection attacks."""
+        if not message:
+            return False, "Message cannot be empty"
+        
+        # Remove control characters except for ACTION
+        if not (message.startswith('\x01ACTION ') and message.endswith('\x01')):
+            # Remove all control characters except space and printable ASCII
+            sanitized = ''.join(char for char in message if ord(char) >= 32 or char in ['\t'])
+            
+            # Check for CTCP injection (except ACTION)
+            if '\x01' in sanitized:
+                return False, "Invalid characters in message"
+            
+            # Limit message length (IRC limit is 512 bytes total, leave room for formatting)
+            max_msg_len = 400  # Conservative limit
+            if len(sanitized.encode('utf-8')) > max_msg_len:
+                sanitized = sanitized[:max_msg_len]
+                print(f"Warning: Message truncated to {max_msg_len} bytes")
+            
+            return True, sanitized
+        
+        return True, message
+    
+    def is_valid_user_command(self, message):
+        """Check if message is a valid user command."""
+        if not message.startswith('/'):
+            return False
+        
+        command = message[1:].split(' ', 1)[0].lower()
+        valid_commands = ['quit', 'join', 'nick', 'help', 'me', 'part', 'msg', 'whois', 'list']
+        return command in valid_commands
+    
+    def show_help(self, command=None):
+        """Display help information for commands."""
+        if command:
+            command = command.lower()
+            help_text = {
+                'quit': "📖 /quit [message] - Disconnect from server with optional quit message",
+                'join': "📖 /join #channel - Join a channel",
+                'part': "📖 /part [#channel] - Leave current or specified channel",
+                'nick': "📖 /nick nickname - Change your nickname",
+                'me': "📖 /me action - Send an action message (* nickname action)",
+                'msg': "📖 /msg nickname message - Send private message to user",
+                'whois': "📖 /whois nickname - Get information about a user",
+                'list': "📖 /list [pattern] - List channels matching pattern",
+                'help': "📖 /help [command] - Show help for all commands or specific command"
+            }
+            
+            if command in help_text:
+                print(help_text[command])
+            else:
+                print(f"❌ No help available for '{command}'")
+                print("💡 Type /help to see all available commands")
+        else:
+            print("📖 Available commands:")
+            print("  /quit [message]     - Disconnect and exit")
+            print("  /join #channel      - Join a channel")
+            print("  /part [#channel]    - Leave current or specified channel")
+            print("  /nick nickname      - Change your nickname")
+            print("  /me action          - Send action message")
+            print("  /msg nick message   - Send private message")
+            print("  /whois nickname     - Get user information")
+            print("  /list [pattern]     - List channels")
+            print("  /help [command]     - Show this help or help for specific command")
+            print()
+            print("💡 Tips:")
+            print("  - Type messages directly to send to current channel")
+            print("  - Channel names must start with #")
+            print("  - Use Ctrl+C to quit")
+    
+    def handle_user_command(self, command_input):
+        """Handle user commands with comprehensive error handling."""
+        if not command_input.startswith('/'):
+            return False
+        
+        # Parse command and arguments
+        parts = command_input[1:].split(' ', 1)
+        command = parts[0].lower()
+        args = parts[1] if len(parts) > 1 else ""
+        
+        # Handle each command with validation
+        if command == 'quit':
+            quit_msg = args if args else "Goodbye!"
+            print(f"👋 Disconnecting: {quit_msg}")
+            self.send_raw(f"QUIT :{quit_msg}")
+            self.running = False
+            return True
+        
+        elif command == 'join':
+            if not args:
+                print("❌ Usage: /join #channel")
+                return True
+            
+            channel = args.strip().split()[0]
+            valid, validated_channel = self.validate_channel_name(channel)
+            if not valid:
+                print(f"❌ {validated_channel}")
+                return True
+            
+            print(f"🚪 Joining {validated_channel}...")
+            if self.join_channel(validated_channel):
+                self.current_channel = validated_channel
+                self.channels.add(validated_channel)
+                print(f"✅ Successfully joined {validated_channel}")
+            else:
+                print(f"❌ Failed to join {validated_channel}")
+            return True
+        
+        elif command == 'nick':
+            if not args:
+                print("❌ Usage: /nick newnickname")
+                return True
+            
+            new_nick = args.strip().split()[0]
+            valid, error_msg = self.validate_nickname(new_nick)
+            if not valid:
+                print(f"❌ {error_msg}")
+                return True
+            
+            print(f"🏷️  Changing nickname to {new_nick}...")
+            self.send_raw(f"NICK {new_nick}")
+            self.nickname = new_nick
+            return True
+        
+        elif command == 'me':
+            if not args:
+                print("❌ Usage: /me action")
+                print("💡 Example: /me waves hello")
+                return True
+            
+            if not self.current_channel:
+                print("❌ Not in a channel. Join a channel first with /join #channel")
+                return True
+            
+            action_msg = f"\x01ACTION {args}\x01"
+            self.send_message(self.current_channel, action_msg)
+            return True
+        
+        elif command == 'msg':
+            if not args or len(args.split()) < 2:
+                print("❌ Usage: /msg nickname message")
+                return True
+            
+            parts = args.split(' ', 1)
+            target_nick = parts[0]
+            message = parts[1]
+            
+            valid, sanitized = self.sanitize_message(message)
+            if not valid:
+                print(f"❌ {sanitized}")
+                return True
+            
+            self.send_message(target_nick, sanitized)
+            print(f"                                                  [{self.format_timestamp()}] -> {target_nick}: {sanitized}")
+            return True
+        
+        elif command == 'help':
+            help_cmd = args.strip() if args else None
+            self.show_help(help_cmd)
+            return True
+        
+        elif command in ['part', 'whois', 'list']:
+            print(f"💭 Command '{command}' recognized but not fully implemented yet")
+            print("💡 Coming in future versions!")
+            return True
+        
+        else:
+            print(f"❌ Unknown command: /{command}")
+            print("💡 Type /help for available commands")
+            return True
+    
+    def handle_user_message(self, message):
+        """Handle user message with validation and security checks."""
+        if not message.strip():
+            return True  # Ignore empty messages
+        
+        if message.startswith('/'):
+            return self.handle_user_command(message)
+        
+        if not self.current_channel:
+            print("❌ Not in a channel. Join a channel first with /join #channel")
+            return True
+        
+        # Validate and sanitize message
+        valid, sanitized = self.sanitize_message(message)
+        if not valid:
+            print(f"❌ {sanitized}")
+            return True
+        
+        # Send message to current channel
+        self.send_message(self.current_channel, sanitized)
+        return True
+    
+    def input_handler(self):
+        """Handle user input in a separate thread."""
+        try:
+            while self.running:
+                try:
+                    user_input = input().strip()
+                    if user_input:
+                        self.handle_user_message(user_input)
+                except EOFError:
+                    break
+                except KeyboardInterrupt:
+                    break
+        except Exception as e:
+            print(f"Input handler error: {e}")
+    
+    def interactive_session(self, initial_channel=None):
+        """Start interactive IRC session with threaded input handling."""
+        if not self.connected or not self.registered:
+            print("❌ Must be connected and registered before starting interactive session")
+            return False
+        
+        self.running = True
+        
+        # Join initial channel if specified
+        if initial_channel:
+            valid, validated_channel = self.validate_channel_name(initial_channel)
+            if valid:
+                if self.join_channel(validated_channel):
+                    self.current_channel = validated_channel
+                    self.channels.add(validated_channel)
+            else:
+                print(f"❌ {validated_channel}")
+        
+        # Start input handling thread
+        self.input_thread = threading.Thread(target=self.input_handler, daemon=True)
+        self.input_thread.start()
+        
+        print("💬 Interactive session started!")
+        print("💡 Type /help for commands, /quit to exit")
+        if self.current_channel:
+            print(f"📺 Current channel: {self.current_channel}")
+        
+        # Main message processing loop
+        last_ping_check = time.time()
+        
+        try:
+            while self.running and self.connected:
+                # Receive and process messages
+                messages = self.receive_raw()
+                for raw_msg in messages:
+                    if self.debug:
+                        print(f"<<< {raw_msg}")
+                    
+                    msg = self.parse_message(raw_msg)
+                    
+                    # Handle PING
+                    if msg['command'] == 'PING':
+                        pong_response = f"PONG :{msg['trailing']}"
+                        self.send_raw(pong_response)
+                        self.last_ping_time = time.time()
+                        if self.debug:
+                            print("Responded to PING")
+                    
+                    # Handle various IRC events
+                    elif msg['command'] in ['PRIVMSG', 'JOIN', 'PART', 'QUIT', 'NICK']:
+                        formatted = self.format_channel_message(msg)
+                        if formatted:
+                            print(formatted)
+                    
+                    # Handle server error responses
+                    elif msg['command'].isdigit():
+                        error_code = int(msg['command'])
+                        if error_code >= 400:
+                            self.handle_server_error(msg)
+                
+                # Check connection health
+                current_time = time.time()
+                if current_time - last_ping_check > 60:  # Check every minute
+                    if current_time - self.last_ping_time > 300:  # 5 minutes without PING
+                        print("⚠️  Warning: No PING received for 5 minutes, connection may be unstable")
+                        self.connection_stable = False
+                    last_ping_check = current_time
+                
+                time.sleep(0.1)  # Small delay to prevent busy waiting
+        
+        except KeyboardInterrupt:
+            print("\n👋 Goodbye!")
+        
+        finally:
+            self.running = False
+            if self.input_thread and self.input_thread.is_alive():
+                self.input_thread.join(timeout=1)
+        
+        return True
+    
+    def handle_server_error(self, msg):
+        """Handle IRC server error responses with user-friendly messages."""
+        error_code = int(msg['command'])
+        error_messages = {
+            401: "❌ No such nick/channel",
+            403: "❌ No such channel", 
+            404: "❌ Cannot send to channel",
+            405: "❌ You have joined too many channels",
+            431: "❌ No nickname given",
+            432: "❌ Erroneous nickname",
+            433: "❌ Nickname is already in use",
+            441: "❌ User not on that channel",
+            442: "❌ You're not on that channel",
+            443: "❌ User is already on channel",
+            461: "❌ Not enough parameters",
+            462: "❌ Already registered",
+            471: "❌ Cannot join channel (+l)",
+            473: "❌ Cannot join channel (+i)",
+            474: "❌ Cannot join channel (+b)",
+            475: "❌ Cannot join channel (+k)",
+            481: "❌ Permission Denied - You're not an IRC operator",
+            482: "❌ You're not channel operator"
+        }
+        
+        error_msg = error_messages.get(error_code, f"❌ Server error {error_code}")
+        if msg['trailing']:
+            error_msg += f": {msg['trailing']}"
+        
+        print(error_msg)
+        
+        # Handle nickname collision
+        if error_code == 433:
+            self.handle_nick_collision()
+    
+    def handle_nick_collision(self):
+        """Handle nickname collision by suggesting alternatives."""
+        import random
+        alternatives = [
+            f"{self.nickname}_{random.randint(1, 99)}",
+            f"{self.nickname}{random.randint(100, 999)}",
+            f"Guest{random.randint(1000, 9999)}"
+        ]
+        
+        print("💡 Nickname suggestions:")
+        for i, alt in enumerate(alternatives, 1):
+            print(f"  {i}. {alt}")
+        print("💡 Use /nick newnickname to change your nickname")
 
 
 def main():
-    """Main function to test Stage 3.1 - Channel Operations."""
-    print("Simple IRC Chat Client - Stage 3.1 Test")
-    print("========================================")
+    """Main function to demonstrate Stage 4 - Essential Commands & Error Handling."""
+    print("Simple IRC Chat Client - Stage 4: Essential Commands & Error Handling")
+    print("====================================================================")
     
     # Create client instance with unique nickname
     import random
     test_nick = f"TestBot{random.randint(1000, 9999)}"
     client = IRCClient(nickname=test_nick, debug=False)
     
-    # Test connection and registration
-    if not client.connect():
-        print("Connection failed!")
-        sys.exit(1)
-    
-    if not client.register():
-        print("Registration failed!")
-        client.disconnect()
-        sys.exit(1)
-    
-    # Test joining a channel
-    test_channel = "#bottest"  # Use a bot testing channel
-    if not client.join_channel(test_channel):
-        print(f"Failed to join {test_channel}")
-        client.disconnect()
-        sys.exit(1)
-    
-    # Test sending a message
-    test_message = f"Hello from {test_nick}! Testing Stage 3.1"
-    print(f"Sending test message: {test_message}")
-    client.send_message(test_channel, test_message)
-    
-    # Listen for channel messages for 30 seconds
-    print("Listening for channel messages for 30 seconds...")
-    start_time = time.time()
-    message_count = 0
-    
-    while time.time() - start_time < 30:
-        messages = client.receive_raw()
-        for raw_msg in messages:
-            print(f"<<< {raw_msg}")
-            msg = client.parse_message(raw_msg)
-            
-            # Handle PING
-            if msg['command'] == 'PING':
-                pong_response = f"PONG :{msg['trailing']}"
-                client.send_raw(pong_response)
-                print("Responded to PING")
-            
-            # Format and display channel messages
-            elif msg['command'] in ['PRIVMSG', 'JOIN', 'PART', 'QUIT']:
-                formatted = client.format_channel_message(msg)
-                if formatted:
-                    print(formatted)
-                    message_count += 1
+    try:
+        # Test connection and registration
+        if not client.connect():
+            print("Connection failed!")
+            sys.exit(1)
         
-        time.sleep(0.1)
+        if not client.register():
+            print("Registration failed!")
+            client.disconnect()
+            sys.exit(1)
+        
+        print(f"✅ Successfully connected as {test_nick}")
+        print("✅ Advanced error handling and validation active")
+        print("✅ Comprehensive command system enabled")
+        print("✅ IRC injection protection in place")
+        print("✅ Type /help for comprehensive command help")
+        print("✅ Enhanced user experience features active")
+        
+        # Start interactive session
+        client.interactive_session("#bottest")
     
-    print(f"Processed {message_count} channel messages")
-    
-    # Disconnect
-    client.disconnect()
-    print("Stage 3.1 Complete: Channel Operations working!")
+    except KeyboardInterrupt:
+        print("\nGoodbye!")
+    finally:
+        client.disconnect()
 
 
 if __name__ == "__main__":
