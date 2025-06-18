@@ -799,7 +799,7 @@ def main():
     
     # Create client instance with unique nickname
     import random
-    test_nick = f"TestBot{random.randint(1000, 9999)}"
+    test_nick = f"SiLabsUser{random.randint(1000, 9999)}"
     client = IRCClient(nickname=test_nick, debug=False)
     
     try:
@@ -821,7 +821,7 @@ def main():
         print("✅ Enhanced user experience features active")
         
         # Start interactive session
-        client.interactive_session("#bottest")
+        client.interactive_session("#SiLabs")
     
     except KeyboardInterrupt:
         print("\nGoodbye!")
