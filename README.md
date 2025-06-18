@@ -8,11 +8,28 @@ This project implements a simple, terminal-based IRC client that can connect to 
 
 ## Features
 
-- Connect to IRC servers
-- Join channels and participate in chat
-- Send and receive messages in real-time
-- Basic IRC commands (/quit, /join, /nick)
-- Simple terminal-based interface
+### Core Functionality
+- ✅ Connect to IRC servers (Libera.Chat, Freenode, etc.)
+- ✅ Join channels and participate in chat
+- ✅ Send and receive messages in real-time
+- ✅ Interactive threaded terminal interface
+- ✅ Comprehensive IRC command support
+
+### Commands
+- ✅ `/quit [message]` - Disconnect with optional quit message
+- ✅ `/join #channel` - Join a channel
+- ✅ `/nick nickname` - Change your nickname
+- ✅ `/me action` - Send action messages
+- ✅ `/msg nickname message` - Send private messages
+- ✅ `/help [command]` - Show help for all or specific commands
+
+### Advanced Features
+- ✅ **Input Validation**: RFC-compliant nickname and channel validation
+- ✅ **Security**: IRC injection prevention and message sanitization
+- ✅ **Error Handling**: User-friendly error messages and recovery
+- ✅ **Real-time**: Simultaneous send/receive with threading
+- ✅ **Help System**: Comprehensive command documentation
+- ✅ **Connection Monitoring**: PING/PONG handling and stability checks
 
 ## Requirements
 
@@ -38,16 +55,38 @@ This project implements a simple, terminal-based IRC client that can connect to 
 The client will connect to irc.libera.chat by default. You can specify a different server in the code.
 
 ### Available Commands
-- `/quit [message]` - Disconnect and exit
+- `/quit [message]` - Disconnect and exit with optional message
 - `/join #channel` - Join a channel
 - `/nick nickname` - Change your nickname
-- `/help` - Show available commands
+- `/me action` - Send action message (* nickname action)
+- `/msg nickname message` - Send private message to user
+- `/help [command]` - Show help for all commands or specific command
+
+### Interactive Features
+- Real-time message display with timestamps
+- Threaded input handling for simultaneous chat
+- Comprehensive error handling with helpful messages
+- Input validation and security protection
+- Connection stability monitoring
 
 ## Development Status
 
-This project is currently in development. See the build plan for detailed progress.
+This project follows a structured build plan with incremental feature delivery.
 
-### Current Stage: Stage 1 - Foundation Setup
+### Current Stage: Stage 4 Complete ✅
+**Essential Commands & Error Handling**
+
+**Completed Stages:**
+- ✅ **Stage 1**: Foundation Setup & Socket Connection
+- ✅ **Stage 2**: IRC Protocol Basics & Authentication  
+- ✅ **Stage 3**: Core Chat Functionality & Interactive Interface
+- ✅ **Stage 4**: Essential Commands & Comprehensive Error Handling
+
+**Next Steps:**
+- **Stage 5**: Polish & Stability (Connection reliability, UX improvements)
+- **Stage 6**: Testing & Documentation (Cross-platform testing, final docs)
+
+See the [build plan](docs/build_plan.md) for detailed progress and upcoming features.
 - [x] Basic project structure
 - [x] Socket connection implementation
 - [ ] IRC protocol basics
