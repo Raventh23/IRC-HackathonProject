@@ -8,8 +8,8 @@ Based on the design document, this build plan breaks down the IRC chat developme
 
 ### 1.1 Project Infrastructure
 - [x] Create GitHub repository: `simple-irc-chat`
-- [ ] Set up local development environment
-- [ ] Create basic project structure:
+- [x] Set up local development environment
+- [x] Create basic project structure:
   ```
   simple-irc-chat/
   ├── src/
@@ -27,10 +27,10 @@ Based on the design document, this build plan breaks down the IRC chat developme
 **Goal**: Establish TCP connection to IRC server
 
 **Tasks**:
-- [ ] Create basic socket connection class
-- [ ] Implement connection to irc.libera.chat:6667
-- [ ] Add basic error handling for connection failures
-- [ ] Test connection establishment and teardown
+- [x] Create basic socket connection class
+- [x] Implement connection to irc.libera.chat:6667
+- [x] Add basic error handling for connection failures
+- [x] Test connection establishment and teardown
 
 **Deliverable**: Script that can connect and disconnect from IRC server
 
@@ -45,11 +45,11 @@ Based on the design document, this build plan breaks down the IRC chat developme
 **Goal**: Successfully register with IRC server
 
 **Tasks**:
-- [ ] Implement NICK command sending
-- [ ] Implement USER command sending
-- [ ] Parse server welcome message (001 response)
-- [ ] Handle nickname collision errors
-- [ ] Add basic message parsing framework
+- [x] Implement NICK command sending
+- [x] Implement USER command sending
+- [x] Parse server welcome message (001 response)
+- [x] Handle nickname collision errors
+- [x] Add basic message parsing framework
 
 **Deliverable**: Client that can authenticate with IRC server
 
@@ -57,11 +57,11 @@ Based on the design document, this build plan breaks down the IRC chat developme
 **Goal**: Send and receive raw IRC messages
 
 **Tasks**:
-- [ ] Implement message sending functionality
-- [ ] Create basic IRC message parser
-- [ ] Handle PING/PONG for connection keepalive
-- [ ] Add message buffering for partial receives
-- [ ] Basic logging for debugging
+- [x] Implement message sending functionality
+- [x] Create basic IRC message parser
+- [x] Handle PING/PONG for connection keepalive
+- [x] Add message buffering for partial receives
+- [x] Basic logging for debugging
 
 **Success Criteria**:
 - Client stays connected without timing out
