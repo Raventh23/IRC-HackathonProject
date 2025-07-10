@@ -7,6 +7,7 @@ This document provides an overview of the Simple IRC Chat Client project structu
 ```
 simple-irc-chat/
 ├── 📄 README.md                    # Main project documentation
+├── 📄 PROJECT_PURPOSE.md           # Detailed explanation of repository purpose
 ├── 📄 LICENSE                      # MIT license
 ├── 📄 CONTRIBUTING.md              # Contributing guidelines
 ├── 📄 CHANGELOG.md                 # Release history

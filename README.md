@@ -4,6 +4,20 @@
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://opensource.org/licenses/MIT)
 [![GitHub release](https://img.shields.io/badge/release-v1.0.0-green.svg)](https://github.com/Raventh23/simple-irc-chat/releases)
 
+## 🎯 **What is this repository?**
+
+This is a **comprehensive educational IRC client project** that teaches network programming through hands-on implementation. You'll build a fully functional IRC chat client from scratch while learning socket programming, multi-threading, and real-world application development.
+
+**Perfect for:** Computer science students, self-taught developers, and anyone wanting to understand how network protocols and chat applications actually work.
+
+**What you get:** A complete IRC client + in-depth learning experience covering network programming fundamentals through practical implementation.
+
+> **🚀 Quick Start:** `python src/irc_client.py` → `/join #test` → start chatting!
+> 
+> **📚 Want to understand the purpose?** Read [PROJECT_PURPOSE.md](PROJECT_PURPOSE.md) for a detailed explanation of why this repository exists and what you'll learn.
+
+---
+
 A comprehensive, terminal-based IRC chat client written in Python for learning and educational purposes.
 
 ## 🌟 Project Overview
