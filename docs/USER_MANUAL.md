@@ -71,8 +71,8 @@ python3 tests/test_stage5.py --help
 
 2. **The client will automatically:**
    - Connect to irc.libera.chat
-   - Register with a random nickname
-   - Join #bottest channel
+   - Register with a random nickname (SiLabsUserXXXX format)
+   - Join #SiLabs channel
 
 3. **Start chatting:**
    - Type messages directly to chat
