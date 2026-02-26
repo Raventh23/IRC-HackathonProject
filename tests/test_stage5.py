@@ -1,7 +1,15 @@
 #!/usr/bin/env python3
 """
 Enhanced IRC Client - Stage 5: Polish & Stability
-Connection reliability, enhanced UX, and configuration support.
+
+This enhanced client demonstrates connection reliability, improved user experience,
+and configuration management features.
+
+Default Configuration:
+- Server: irc.libera.chat:6667
+- Channel: #SiLabs
+- Auto-reconnection: Disabled (enable with --auto-reconnect)
+- Debug mode: Disabled (enable with --debug)
 """
 
 import sys
@@ -542,7 +550,7 @@ Examples:
     parser.add_argument('-c', '--config',
                         help='Configuration file to load/save')
     parser.add_argument('--channel',
-                        help='Initial channel to join (default: #bottest)')
+                        help='Initial channel to join (default: #SiLabs)')
     parser.add_argument('--auto-reconnect', action='store_true',
                         help='Enable automatic reconnection')
     parser.add_argument('--reconnect-delay', type=int, default=30,
@@ -614,7 +622,7 @@ def main():
         print()
         
         # Start enhanced interactive session
-        initial_channel = args.channel or "#bottest"
+        initial_channel = args.channel or "#SiLabs"
         client.enhanced_interactive_session(initial_channel)
     
     except KeyboardInterrupt:

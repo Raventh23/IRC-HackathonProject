@@ -1,7 +1,14 @@
 #!/usr/bin/env python3
 """
-IRC Chat Demo - Stage 3 Complete
-Interactive IRC client ready for real use!
+IRC Chat Demo - Interactive Client
+
+This demo script provides an interactive way to connect to an IRC server.
+It prompts for connection details and starts an interactive IRC session.
+
+Default Configuration:
+- Server: irc.libera.chat
+- Channel: #SiLabs
+- Nickname: IRCUserXXX (random number)
 """
 
 import sys
@@ -24,9 +31,9 @@ def main():
     if not nickname:
         nickname = f"IRCUser{random.randint(100, 999)}"
     
-    channel = input("Enter channel to join (default: #bottest): ").strip()
+    channel = input("Enter channel to join (default: #SiLabs): ").strip()
     if not channel:
-        channel = "#bottest"
+        channel = "#SiLabs"
     elif not channel.startswith('#'):
         channel = '#' + channel
     
