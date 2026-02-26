@@ -4,10 +4,6 @@ Unit tests for IRC client core functionality.
 Tests the key methods without requiring network connections.
 """
 
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
 import pytest
 from src.irc_client import IRCClient
 from datetime import datetime
@@ -438,7 +434,3 @@ class TestBufferHandling:
         # Simulate incomplete data
         self.client.buffer = "PING :incomplete"
         assert "incomplete" in self.client.buffer
-
-
-if __name__ == "__main__":
-    pytest.main([__file__, "-v"])
