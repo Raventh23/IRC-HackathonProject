@@ -32,7 +32,8 @@
 
 2. **Verify installation:**
    ```bash
-   python3 src/irc_client.py --help
+   python3 --version  # Should show Python 3.7+
+   python3 -c "import socket; print('Socket module OK')"
    ```
 
 3. **Test basic functionality:**

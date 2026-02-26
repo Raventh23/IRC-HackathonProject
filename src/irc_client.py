@@ -1,7 +1,22 @@
 #!/usr/bin/env python3
 """
-Simple IRC Chat Client - Stage 5: Polish & Stability
-Enhanced IRC client with connection reliability and improved user experience.
+Simple IRC Chat Client - Enhanced with Stability & Advanced Features
+
+A comprehensive IRC client implementation demonstrating network programming,
+multi-threading, and real-time communication. Features include auto-reconnection,
+configuration management, session statistics, and comprehensive error handling.
+
+Default Configuration:
+- Server: irc.libera.chat:6667
+- Channel: #SiLabs
+- Nickname: SiLabsUserXXXX (random number suffix)
+
+This client provides a full-featured IRC experience with:
+- Real-time message sending and receiving
+- Comprehensive command system (/join, /nick, /msg, /quit, etc.)
+- Auto-reconnection and connection monitoring
+- Session statistics and uptime tracking
+- RFC-compliant input validation and security features
 """
 
 import socket
@@ -16,10 +31,42 @@ from datetime import datetime, timedelta
 
 
 class IRCClient:
-    """Enhanced IRC client with Stage 5 polish and stability features."""
+    """
+    Enhanced IRC client with comprehensive features and stability.
+    
+    This client implements the IRC protocol with advanced features including:
+    - Multi-threaded architecture for simultaneous send/receive
+    - Automatic reconnection with configurable retry logic
+    - Session statistics and connection health monitoring
+    - RFC-compliant nickname and channel validation
+    - Security features (IRC injection prevention, message sanitization)
+    - Comprehensive command system with context-sensitive help
+    
+    Attributes:
+        server (str): IRC server hostname (default: irc.libera.chat)
+        port (int): IRC server port (default: 6667)
+        nickname (str): User's IRC nickname (default: SimpleBot)
+        username (str): IRC username (default: simple)
+        realname (str): User's real name (default: Simple IRC Client)
+        debug (bool): Enable debug logging (default: False)
+        auto_reconnect (bool): Enable automatic reconnection (default: False)
+        show_status_messages (bool): Show connection status messages (default: True)
+    """
     
     def __init__(self, server="irc.libera.chat", port=6667, nickname="SimpleBot", username="simple", realname="Simple IRC Client", debug=False, auto_reconnect=False, show_status_messages=True):
-        """Initialize IRC client with enhanced Stage 5 features."""
+        """
+        Initialize IRC client with configuration options.
+        
+        Args:
+            server (str): IRC server hostname
+            port (int): IRC server port
+            nickname (str): Initial nickname for the user
+            username (str): IRC username (typically lowercase of nickname)
+            realname (str): User's "real name" field
+            debug (bool): Enable debug logging to console
+            auto_reconnect (bool): Automatically reconnect on disconnection
+            show_status_messages (bool): Display connection status updates
+        """
         self.server = server
         self.port = port
         self.nickname = nickname
@@ -793,9 +840,22 @@ class IRCClient:
 
 
 def main():
-    """Main function to demonstrate Stage 4 - Essential Commands & Error Handling."""
-    print("Simple IRC Chat Client - Stage 4: Essential Commands & Error Handling")
-    print("====================================================================")
+    """
+    Main entry point for the IRC client.
+    
+    When run directly (python src/irc_client.py), this creates an IRC client
+    with SiLabs defaults:
+    - Nickname: SiLabsUserXXXX (where XXXX is a random 4-digit number)
+    - Channel: #SiLabs
+    - Server: irc.libera.chat:6667
+    
+    The client will automatically connect, register, and join the default channel.
+    Use /help once connected to see available commands.
+    """
+    print("Simple IRC Chat Client - Enhanced Edition")
+    print("=" * 50)
+    print("Connecting to #SiLabs on irc.libera.chat...")
+    print("=" * 50)
     
     # Create client instance with unique nickname
     import random

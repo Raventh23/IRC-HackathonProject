@@ -111,7 +111,7 @@ Based on the design document, this build plan bre### 4.1 Basic IRC Commands
 - [x] Handle graceful shutdown
 
 **Success Criteria**:
-- Can join #test channel and see live messages
+- Can join #SiLabs or other channels and see live messages
 - Can send messages to channel
 - Other users can see sent messages
 - Clean exit with /quit command
@@ -321,7 +321,7 @@ Each stage must pass before proceeding:
 
 ### Testing Environment
 - **Primary IRC Server**: irc.libera.chat
-- **Test Channel**: #bottest or similar low-traffic channel
+- **Test Channel**: #SiLabs (default) or other low-traffic channels
 - **Platforms**: macOS (primary), Windows, Linux
 
 ### Optional Tools (Later Stages)

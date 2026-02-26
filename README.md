@@ -6,6 +6,8 @@
 
 A comprehensive, terminal-based IRC chat client written in Python for learning and educational purposes.
 
+> **📢 Recent Updates:** Default channel updated to #SiLabs for community alignment. See [CHANGELOG.md](CHANGELOG.md) for details.
+
 ## 🌟 Project Overview
 
 This project implements a fully-featured IRC client that demonstrates network programming fundamentals while providing a robust, real-world chat application. Built through a structured 6-stage development process, it serves as both an educational resource and a functional IRC client.
@@ -77,10 +79,11 @@ This project implements a fully-featured IRC client that demonstrates network pr
    ```
 
 3. **Start chatting**:
-   - Connect to irc.libera.chat (default)
-   - Join a channel: `/join #test`
+   - Connects to irc.libera.chat (default server)
+   - Automatically joins #SiLabs channel (default channel)
    - Send messages: Just type and press Enter
    - Get help: `/help`
+   - Join other channels: `/join #channelname`
 
 ### ⚙️ Configuration Options
 
@@ -106,7 +109,7 @@ Create `config/my_config.json`:
   "server": "irc.libera.chat",
   "port": 6667,
   "nickname": "MyBot",
-  "channel": "#test",
+  "channel": "#SiLabs",
   "auto_reconnect": true,
   "debug": false,
   "reconnect_delay": 5
@@ -119,29 +122,30 @@ Create `config/my_config.json`:
 ```
 $ python src/irc_client.py
 Connected to irc.libera.chat:6667
-[12:34:56] Connected as: Guest123
+[12:34:56] Connected as: SiLabsUser1234
+[12:34:56] Joined #SiLabs
 [12:34:56] Type /help for commands or just start typing to chat
 
-> /join #python
-[12:35:01] Joined #python
-
 > Hello everyone!
-[12:35:05] <Guest123> Hello everyone!
+[12:35:05] <SiLabsUser1234> Hello everyone!
 
-> /nick PyLearner
-[12:35:10] Nick changed to: PyLearner
+> /join #python
+[12:35:10] Joined #python
 
 > /me is learning IRC protocols
-[12:35:15] * PyLearner is learning IRC protocols
+[12:35:15] * SiLabsUser1234 is learning IRC protocols
+
+> /nick MyNewNick
+[12:35:20] Nick changed to: MyNewNick
 
 > /stats
-[12:35:20] Session Statistics:
-            Uptime: 0:01:24
+[12:35:25] Session Statistics:
+            Uptime: 0:01:29
             Messages sent: 3
             Connection: Stable
 
 > /quit Thanks for the chat!
-[12:35:25] Disconnected: Thanks for the chat!
+[12:35:30] Disconnected: Thanks for the chat!
 ```
 
 ### Advanced Configuration
@@ -305,7 +309,7 @@ Common issues and solutions are documented in our [Troubleshooting Guide](docs/T
 
 1. **📥 Clone the repository**: `git clone https://github.com/Raventh23/simple-irc-chat.git`
 2. **🏃 Run the client**: `python src/irc_client.py`
-3. **💬 Join a channel**: `/join #test`
+3. **💬 Start chatting**: You'll auto-join #SiLabs channel
 4. **📖 Explore the docs**: Check out our comprehensive guides
 5. **🤝 Get involved**: Contribute to the project!
 

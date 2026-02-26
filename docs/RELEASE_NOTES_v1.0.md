@@ -97,9 +97,10 @@ Comprehensive documentation is available:
 
 3. **Start chatting**:
    - The client connects to irc.libera.chat by default
-   - Join a channel: `/join #test`
+   - Automatically joins #SiLabs channel (default)
    - Send messages: Just type and press Enter
    - Get help: `/help`
+   - Join other channels: `/join #channelname`
 
 ## 🎪 Demo and Examples
 
@@ -121,7 +122,7 @@ python src/irc_client.py -s irc.libera.chat -n MyBot --channel "#python"
   "server": "irc.libera.chat",
   "port": 6667,
   "nickname": "MyBot",
-  "channel": "#test",
+  "channel": "#SiLabs",
   "auto_reconnect": true,
   "debug": false
 }

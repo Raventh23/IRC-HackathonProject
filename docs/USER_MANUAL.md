@@ -66,18 +66,21 @@ python3 tests/test_stage5.py --help
 
 1. **Start the client:**
    ```bash
-   python3 tests/test_stage5.py
+   python3 src/irc_client.py
    ```
 
 2. **The client will automatically:**
    - Connect to irc.libera.chat
-   - Register with a random nickname
-   - Join #bottest channel
+   - Register with a random nickname (SiLabsUserXXXX format)
+   - Join #SiLabs channel
 
 3. **Start chatting:**
    - Type messages directly to chat
    - Use `/help` to see available commands
    - Use `/quit` to exit
+   - Use `/join #channelname` to join other channels
+
+> **💡 Tip:** The default configuration connects you to the #SiLabs channel on irc.libera.chat. You can join other channels using `/join #channelname` or customize defaults using a config file.
 
 ### Your First IRC Session
 ```bash
@@ -97,7 +100,12 @@ Once connected, try these commands:
 
 #### Using Default Settings
 ```bash
+# Recommended: Use the main client
+python3 src/irc_client.py
+
+# Alternative: Use the enhanced test client with more options
 python3 tests/test_stage5.py
+```
 ```
 Connects to irc.libera.chat with auto-generated nickname.
 
