@@ -6,6 +6,8 @@
 
 A comprehensive, terminal-based IRC chat client written in Python for learning and educational purposes.
 
+> **📢 Recent Updates:** Default channel updated to #SiLabs for community alignment. See [CHANGELOG.md](CHANGELOG.md) for details.
+
 ## 🌟 Project Overview
 
 This project implements a fully-featured IRC client that demonstrates network programming fundamentals while providing a robust, real-world chat application. Built through a structured 6-stage development process, it serves as both an educational resource and a functional IRC client.
